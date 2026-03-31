@@ -12,12 +12,10 @@ import {
   Heart,
   Share2,
   Edit3,
-  Sparkles
 } from 'lucide-react';
 import { Entry } from '../types';
 import { TYPE_COLORS, NEON_GLOWS } from '../constants';
 import { cn } from '../lib/utils';
-import { generateReview } from '../services/gemini';
 
 interface DetailViewProps {
   entry: Entry;
@@ -27,7 +25,6 @@ interface DetailViewProps {
 }
 
 export function DetailView({ entry, onClose, onEdit, onUpdateReview }: DetailViewProps) {
-  const [isGenerating, setIsGenerating] = React.useState(false);
   const neonColor = TYPE_COLORS[entry.type as keyof typeof TYPE_COLORS] || 'var(--color-neon-blue)';
   const neonGlow = NEON_GLOWS[entry.type as keyof typeof NEON_GLOWS] || 'neon-glow-blue';
 
@@ -142,26 +139,6 @@ export function DetailView({ entry, onClose, onEdit, onUpdateReview }: DetailVie
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Review</p>
-                {onUpdateReview && (
-                  <button 
-                    onClick={async () => {
-                      setIsGenerating(true);
-                      try {
-                        const review = await generateReview(entry.title, entry.myRating || entry.imdbRating, entry.genre);
-                        onUpdateReview(entry.id, review);
-                      } catch (err) {
-                        console.error(err);
-                      } finally {
-                        setIsGenerating(false);
-                      }
-                    }}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 text-[10px] font-black text-neon-blue uppercase tracking-widest hover:opacity-80 transition-opacity disabled:opacity-50"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    {isGenerating ? 'Generating...' : 'AI Review'}
-                  </button>
-                )}
               </div>
               <div className="bg-white/5 p-6 rounded-3xl border border-white/5 relative">
                 <p className="text-gray-300 leading-relaxed italic">"{entry.review || 'No review written yet...'}"</p>

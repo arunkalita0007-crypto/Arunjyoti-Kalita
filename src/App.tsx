@@ -57,13 +57,6 @@ export default function App() {
     ));
   };
 
-  const handleUpdateReview = (id: string, review: string) => {
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, review } : e));
-    if (selectedEntry?.id === id) {
-      setSelectedEntry(prev => prev ? { ...prev, review } : null);
-    }
-  };
-
   const handleResetData = () => {
     setEntries([]);
     setActiveTab('dashboard');
@@ -219,7 +212,6 @@ export default function App() {
                 handleEditEntry(selectedEntry);
                 setSelectedEntry(null);
               }}
-              onUpdateReview={handleUpdateReview}
             />
           )}
         </AnimatePresence>
