@@ -5,18 +5,20 @@ import { EntryForm } from './components/EntryForm';
 import { Stats } from './components/Stats';
 import { Watchlist } from './components/Watchlist';
 import { Profile } from './components/Profile';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import { Entry } from './types';
-import { SAMPLE_DATA } from './sampleData';
+import { STARTER_MOVIES } from './data/starterMovies';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [entries, setEntries] = useState<Entry[]>(() => {
     const saved = localStorage.getItem('cinetrack_entries');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : STARTER_MOVIES;
   });
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('cinetrack_entries', JSON.stringify(entries));
@@ -44,10 +46,9 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    if (window.confirm('Are you sure you want to clear all data? This will delete your entire library.')) {
-      setEntries([]);
-      setActiveTab('dashboard');
-    }
+    setEntries([]);
+    setActiveTab('dashboard');
+    setIsResetModalOpen(false);
   };
 
   const renderContent = () => {
@@ -68,7 +69,7 @@ export default function App() {
       case 'watchlist':
         return <Watchlist entries={entries} onEdit={handleEditEntry} />;
       case 'profile':
-        return <Profile entries={entries} onReset={handleResetData} />;
+        return <Profile entries={entries} onReset={() => setIsResetModalOpen(true)} />;
       default:
         return <Dashboard entries={entries} onEdit={handleEditEntry} />;
     }
@@ -119,6 +120,16 @@ export default function App() {
             </div>
           )}
         </AnimatePresence>
+
+        <ConfirmationModal
+          isOpen={isResetModalOpen}
+          onClose={() => setIsResetModalOpen(false)}
+          onConfirm={handleResetData}
+          title="Clear All Data?"
+          message="This will permanently delete your entire library and statistics. This action cannot be undone."
+          confirmText="Clear Everything"
+          cancelText="Keep My Data"
+        />
       </main>
     </div>
   );

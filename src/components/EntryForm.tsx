@@ -55,9 +55,14 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
+    let val: any = value;
+    if (type === 'number') {
+      val = value === '' ? '' : parseFloat(value);
+      if (isNaN(val as number) && value !== '') val = 0;
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value
+      [name]: val
     }));
   };
 
@@ -68,10 +73,16 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const isCompleted = formData.status === 'Completed';
+    const wasCompleted = entry?.status === 'Completed';
+    
     onSave({
       ...formData,
       id: entry?.id || Math.random().toString(36).substr(2, 9),
       addedAt: entry?.addedAt || new Date().toISOString(),
+      watchedDate: isCompleted && !wasCompleted 
+        ? new Date().toISOString() 
+        : (isCompleted ? entry?.watchedDate : undefined)
     } as Entry);
   };
 
@@ -131,7 +142,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
                 <input 
                   type="number"
                   name="year"
-                  value={formData.year}
+                  value={formData.year ?? ''}
                   onChange={handleChange}
                   className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
                 />
@@ -249,7 +260,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
               type="number"
               step="0.1"
               name="imdbRating"
-              value={formData.imdbRating}
+              value={formData.imdbRating ?? ''}
               onChange={handleChange}
               className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
             />
@@ -263,7 +274,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
               step="0.5"
               max="10"
               name="myRating"
-              value={formData.myRating}
+              value={formData.myRating ?? ''}
               onChange={handleChange}
               className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
             />
@@ -298,7 +309,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
               <input 
                 type="number"
                 name="totalSeasons"
-                value={formData.totalSeasons}
+                value={formData.totalSeasons ?? ''}
                 onChange={handleChange}
                 className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
               />
@@ -308,7 +319,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
               <input 
                 type="number"
                 name="totalEpisodes"
-                value={formData.totalEpisodes}
+                value={formData.totalEpisodes ?? ''}
                 onChange={handleChange}
                 className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
               />
@@ -318,7 +329,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
               <input 
                 type="number"
                 name="episodesWatched"
-                value={formData.episodesWatched}
+                value={formData.episodesWatched ?? ''}
                 onChange={handleChange}
                 className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
               />

@@ -40,7 +40,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
   const neonGlow = NEON_GLOWS[entry.type as keyof typeof NEON_GLOWS] || 'neon-glow-blue';
 
   const isSeries = ['Web Series', 'Sitcom', 'Anime', 'Mini-Series'].includes(entry.type);
-  const progress = isSeries && entry.totalEpisodes 
+  const progress = isSeries && entry.totalEpisodes && entry.totalEpisodes > 0
     ? Math.round((entry.episodesWatched / entry.totalEpisodes) * 100) 
     : 0;
 

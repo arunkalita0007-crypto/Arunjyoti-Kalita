@@ -27,8 +27,42 @@ export function Sidebar({ activeTab, setActiveTab, entries }: SidebarProps) {
     { id: 'profile', label: 'WRAP-UP', icon: User },
   ];
 
-  // Simple streak logic: if there are entries, show a streak, otherwise 0
-  const streak = entries.length > 0 ? 1 : 0;
+  const streak = React.useMemo(() => {
+    const completedDates = entries
+      .filter(e => e.status === 'Completed' && e.watchedDate)
+      .map(e => new Date(e.watchedDate!).toDateString());
+    
+    if (completedDates.length === 0) return 0;
+    
+    const uniqueDates = Array.from(new Set(completedDates))
+      .map(d => new Date(d))
+      .sort((a, b) => b.getTime() - a.getTime());
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const mostRecent = uniqueDates[0];
+    const diffDays = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 1) return 0;
+    
+    let currentStreak = 1;
+    let lastDate = mostRecent;
+    
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const date = uniqueDates[i];
+      const diff = Math.floor((lastDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diff === 1) {
+        currentStreak++;
+        lastDate = date;
+      } else {
+        break;
+      }
+    }
+    
+    return currentStreak;
+  }, [entries]);
 
   return (
     <div className="w-72 bg-black/60 backdrop-blur-3xl border-r border-white/5 h-screen sticky top-0 flex flex-col p-8 z-40">

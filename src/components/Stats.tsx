@@ -22,39 +22,19 @@ interface StatsProps {
 }
 
 export function Stats({ entries }: StatsProps) {
-  if (entries.length === 0) {
-    return (
-      <div className="space-y-12 pb-20">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-5xl font-black text-white tracking-tighter uppercase font-display">Insights & Stats</h2>
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Deep dive into your personal cinematic universe</p>
-        </div>
-
-        <div className="flex flex-col items-center justify-center py-32 space-y-8 bg-zinc-900/30 border border-white/5 rounded-[3rem] border-dashed">
-          <div className="w-24 h-24 rounded-[2rem] bg-zinc-900 flex items-center justify-center border border-white/5">
-            <PieChart className="w-10 h-10 text-gray-800" />
-          </div>
-          <div className="text-center space-y-3">
-            <h3 className="text-3xl font-black text-white uppercase tracking-tight font-display">Nothing here yet</h3>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] max-w-md mx-auto leading-relaxed">
-              Start adding content to your library to see your viewing habits and statistics come to life!
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const activeEntries = entries.filter(e => e.status === 'Completed' || e.status === 'Watching');
+  const hasActiveEntries = activeEntries.length > 0;
 
   // Data processing
   const typeData = Object.entries(
-    entries.reduce((acc, curr) => {
+    activeEntries.reduce((acc, curr) => {
       acc[curr.type] = (acc[curr.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
 
   const genreData = Object.entries(
-    entries.reduce((acc, curr) => {
+    activeEntries.reduce((acc, curr) => {
       acc[curr.genre] = (acc[curr.genre] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -63,28 +43,28 @@ export function Stats({ entries }: StatsProps) {
    .slice(0, 8);
 
   const platformData = Object.entries(
-    entries.reduce((acc, curr) => {
+    activeEntries.reduce((acc, curr) => {
       acc[curr.platform] = (acc[curr.platform] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
 
-  const totalHours = Math.round(entries.reduce((acc, curr) => {
+  const totalHours = Math.round(activeEntries.reduce((acc, curr) => {
     const time = curr.runtime * (curr.episodesWatched || 1);
     return acc + time;
   }, 0) / 60);
 
   const topActor = Object.entries(
-    entries.reduce((acc, curr) => {
-      if (curr.leadActor !== 'N/A') acc[curr.leadActor] = (acc[curr.leadActor] || 0) + 1;
-      if (curr.leadActress !== 'N/A') acc[curr.leadActress] = (acc[curr.leadActress] || 0) + 1;
+    activeEntries.reduce((acc, curr) => {
+      if (curr.leadActor && curr.leadActor !== 'N/A') acc[curr.leadActor] = (acc[curr.leadActor] || 0) + 1;
+      if (curr.leadActress && curr.leadActress !== 'N/A') acc[curr.leadActress] = (acc[curr.leadActress] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
   const topDirector = Object.entries(
-    entries.reduce((acc, curr) => {
-      acc[curr.director] = (acc[curr.director] || 0) + 1;
+    activeEntries.reduce((acc, curr) => {
+      if (curr.director && curr.director !== 'N/A') acc[curr.director] = (acc[curr.director] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
@@ -111,6 +91,19 @@ export function Stats({ entries }: StatsProps) {
         <h2 className="text-5xl font-black text-white tracking-tighter uppercase font-display">Insights & Stats</h2>
         <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Deep dive into your personal cinematic universe</p>
       </div>
+
+      {!hasActiveEntries && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-neon-blue/10 border border-neon-blue/20 p-12 rounded-[3rem] text-center space-y-4"
+        >
+          <h3 className="text-3xl font-black text-white uppercase tracking-tight font-display">Start watching to unlock your stats!</h3>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] max-w-md mx-auto leading-relaxed">
+            Complete movies or start watching series to see your viewing habits and statistics come to life!
+          </p>
+        </motion.div>
+      )}
 
       {/* Top Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -218,7 +211,7 @@ export function Stats({ entries }: StatsProps) {
           <div className="w-full space-y-6">
             {['Completed', 'Watching', 'Want to Watch', 'Dropped'].map((status) => {
               const count = entries.filter(e => e.status === status).length;
-              const percentage = (count / entries.length) * 100;
+              const percentage = entries.length > 0 ? (count / entries.length) * 100 : 0;
               return (
                 <div key={status} className="space-y-2">
                   <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
