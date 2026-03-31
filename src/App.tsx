@@ -6,6 +6,7 @@ import { Stats } from './components/Stats';
 import { Watchlist } from './components/Watchlist';
 import { Profile } from './components/Profile';
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { DetailView } from './components/DetailView';
 import { Entry } from './types';
 import { STARTER_MOVIES } from './data/starterMovies';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,6 +20,7 @@ export default function App() {
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
 
   useEffect(() => {
     localStorage.setItem('cinetrack_entries', JSON.stringify(entries));
@@ -45,16 +47,69 @@ export default function App() {
     setIsFormOpen(true);
   };
 
+  const handleBulkDelete = (ids: string[]) => {
+    setEntries(prev => prev.filter(e => !ids.includes(e.id)));
+  };
+
+  const handleBulkStatusUpdate = (ids: string[], status: Entry['status']) => {
+    setEntries(prev => prev.map(e => 
+      ids.includes(e.id) ? { ...e, status, watchedDate: status === 'Completed' ? new Date().toISOString() : e.watchedDate } : e
+    ));
+  };
+
+  const handleUpdateReview = (id: string, review: string) => {
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, review } : e));
+    if (selectedEntry?.id === id) {
+      setSelectedEntry(prev => prev ? { ...prev, review } : null);
+    }
+  };
+
   const handleResetData = () => {
     setEntries([]);
     setActiveTab('dashboard');
     setIsResetModalOpen(false);
   };
 
+  const handleExportData = () => {
+    const dataStr = JSON.stringify(entries, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `cinetrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedEntries = JSON.parse(event.target?.result as string);
+        if (Array.isArray(importedEntries)) {
+          setEntries(importedEntries);
+          alert('Data imported successfully!');
+        }
+      } catch (err) {
+        alert('Invalid backup file.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard entries={entries} onEdit={handleEditEntry} />;
+        return (
+          <Dashboard 
+            entries={entries} 
+            onEdit={handleEditEntry} 
+            onSelect={setSelectedEntry}
+            onBulkDelete={handleBulkDelete}
+            onBulkStatusUpdate={handleBulkStatusUpdate}
+          />
+        );
       case 'add':
         return (
           <div className="pt-10">
@@ -67,11 +122,34 @@ export default function App() {
       case 'stats':
         return <Stats entries={entries} />;
       case 'watchlist':
-        return <Watchlist entries={entries} onEdit={handleEditEntry} />;
+        return (
+          <Watchlist 
+            entries={entries} 
+            onEdit={handleEditEntry} 
+            onSelect={setSelectedEntry}
+            onBulkDelete={handleBulkDelete}
+            onBulkStatusUpdate={handleBulkStatusUpdate}
+          />
+        );
       case 'profile':
-        return <Profile entries={entries} onReset={() => setIsResetModalOpen(true)} />;
+        return (
+          <Profile 
+            entries={entries} 
+            onReset={() => setIsResetModalOpen(true)} 
+            onExport={handleExportData}
+            onImport={handleImportData}
+          />
+        );
       default:
-        return <Dashboard entries={entries} onEdit={handleEditEntry} />;
+        return (
+          <Dashboard 
+            entries={entries} 
+            onEdit={handleEditEntry} 
+            onSelect={setSelectedEntry}
+            onBulkDelete={handleBulkDelete}
+            onBulkStatusUpdate={handleBulkStatusUpdate}
+          />
+        );
     }
   };
 
@@ -130,6 +208,21 @@ export default function App() {
           confirmText="Clear Everything"
           cancelText="Keep My Data"
         />
+
+        {/* Cinematic Detail View */}
+        <AnimatePresence>
+          {selectedEntry && (
+            <DetailView 
+              entry={selectedEntry} 
+              onClose={() => setSelectedEntry(null)}
+              onEdit={() => {
+                handleEditEntry(selectedEntry);
+                setSelectedEntry(null);
+              }}
+              onUpdateReview={handleUpdateReview}
+            />
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

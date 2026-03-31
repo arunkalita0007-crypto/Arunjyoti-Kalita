@@ -13,9 +13,11 @@ import { Entry } from '../types';
 interface ProfileProps {
   entries: Entry[];
   onReset: () => void;
+  onExport: () => void;
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function Profile({ entries, onReset }: ProfileProps) {
+export function Profile({ entries, onReset, onExport, onImport }: ProfileProps) {
   const completed = entries.filter(e => e.status === 'Completed');
   
   // Top Genre
@@ -177,13 +179,20 @@ export function Profile({ entries, onReset }: ProfileProps) {
 
       {/* Share Section */}
       <div className="flex flex-col items-center gap-6">
-        <div className="flex justify-center gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           <button className="px-8 py-4 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-sm hover:scale-105 transition-transform shadow-xl shadow-white/10">
             Share My Wrap-Up
           </button>
-          <button className="px-8 py-4 rounded-2xl bg-zinc-800 text-white font-black uppercase tracking-widest text-sm hover:scale-105 transition-transform border border-white/10">
-            Download Poster
+          <button 
+            onClick={onExport}
+            className="px-8 py-4 rounded-2xl bg-zinc-800 text-white font-black uppercase tracking-widest text-sm hover:scale-105 transition-transform border border-white/10"
+          >
+            Export Backup
           </button>
+          <label className="px-8 py-4 rounded-2xl bg-zinc-800 text-white font-black uppercase tracking-widest text-sm hover:scale-105 transition-transform border border-white/10 cursor-pointer">
+            Import Backup
+            <input type="file" accept=".json" onChange={onImport} className="hidden" />
+          </label>
         </div>
         
         <button 

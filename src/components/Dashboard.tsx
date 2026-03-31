@@ -7,24 +7,41 @@ import {
   Clock, 
   Star,
   ChevronRight,
-  X
+  X,
+  Sparkles,
+  Smile,
+  Trash2,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { Entry } from '../types';
 import { EntryCard } from './EntryCard';
 import { TYPE_COLORS, TYPE_OPTIONS, GENRES, STATUS_OPTIONS } from '../constants';
 import { cn } from '../lib/utils';
+import { getMovieRecommendations, getMoodSuggestion } from '../services/gemini';
 
 interface DashboardProps {
   entries: Entry[];
   onEdit: (entry: Entry) => void;
+  onSelect: (entry: Entry) => void;
+  onBulkDelete: (ids: string[]) => void;
+  onBulkStatusUpdate: (ids: string[], status: Entry['status']) => void;
 }
 
-export function Dashboard({ entries, onEdit }: DashboardProps) {
+export function Dashboard({ entries, onEdit, onSelect, onBulkDelete, onBulkStatusUpdate }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('All');
   const [selectedGenre, setSelectedGenre] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isGeneratingRecs, setIsGeneratingRecs] = useState(false);
+  
+  const [mood, setMood] = useState('');
+  const [moodSuggestion, setMoodSuggestion] = useState<any>(null);
+  const [isGeneratingMood, setIsGeneratingMood] = useState(false);
 
   const filteredEntries = useMemo(() => {
     return entries.filter(entry => {
@@ -59,8 +76,97 @@ export function Dashboard({ entries, onEdit }: DashboardProps) {
     setSelectedStatus('All');
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredEntries.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredEntries.map(e => e.id));
+    }
+  };
+
+  const generateRecommendations = async () => {
+    setIsGeneratingRecs(true);
+    try {
+      const recs = await getMovieRecommendations(entries);
+      setRecommendations(recs);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGeneratingRecs(false);
+    }
+  };
+
+  const handleMoodSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mood.trim()) return;
+    setIsGeneratingMood(true);
+    try {
+      const suggestion = await getMoodSuggestion(mood, entries.filter(e => e.status === 'Want to Watch'));
+      setMoodSuggestion(suggestion);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGeneratingMood(false);
+    }
+  };
+
   return (
     <div className="space-y-16 pb-20">
+      {/* Bulk Action Bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 border border-white/10 rounded-3xl p-4 shadow-2xl flex items-center gap-6 backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3 px-4 border-r border-white/10">
+              <span className="text-neon-blue font-black text-xl">{selectedIds.length}</span>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Selected</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {STATUS_OPTIONS.map(status => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    onBulkStatusUpdate(selectedIds, status);
+                    setSelectedIds([]);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest text-white transition-colors border border-white/5"
+                >
+                  Mark {status}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  if (confirm(`Delete ${selectedIds.length} items?`)) {
+                    onBulkDelete(selectedIds);
+                    setSelectedIds([]);
+                  }
+                }}
+                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 transition-colors border border-red-500/20"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setSelectedIds([])}
+              className="p-2 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Hero Section */}
       {!isFiltered && (
         <section className="relative h-[500px] rounded-[3rem] overflow-hidden group">
@@ -245,6 +351,16 @@ export function Dashboard({ entries, onEdit }: DashboardProps) {
         </AnimatePresence>
 
         {/* Content Grid */}
+        <div className="flex items-center justify-between mb-4">
+          <button 
+            onClick={handleSelectAll}
+            className="flex items-center gap-2 text-[10px] font-black text-gray-500 hover:text-white transition-colors uppercase tracking-[0.2em]"
+          >
+            {selectedIds.length === filteredEntries.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            {selectedIds.length === filteredEntries.length ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
+
         {filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-8 bg-zinc-900/30 border border-white/5 rounded-[3rem] border-dashed">
             <div className="w-20 h-20 rounded-3xl bg-zinc-900 flex items-center justify-center border border-white/5">
@@ -266,10 +382,126 @@ export function Dashboard({ entries, onEdit }: DashboardProps) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
             {recentEntries.map(entry => (
-              <EntryCard key={entry.id} entry={entry} onEdit={onEdit} />
+              <EntryCard 
+                key={entry.id} 
+                entry={entry} 
+                onEdit={onEdit} 
+                onSelect={onSelect}
+                isSelected={selectedIds.includes(entry.id)}
+                onToggleSelect={handleToggleSelect}
+              />
             ))}
           </div>
         )}
+      </section>
+
+      {/* AI Recommendations Section */}
+      <section className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-neon-blue/10 flex items-center justify-center border border-neon-blue/20 shadow-[0_0_15px_rgba(0,242,255,0.1)]">
+              <Sparkles className="w-5 h-5 text-neon-blue" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black text-white uppercase tracking-tight">AI Recommendations</h3>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Personalized picks based on your taste</p>
+            </div>
+          </div>
+          <button 
+            onClick={generateRecommendations}
+            disabled={isGeneratingRecs || entries.length === 0}
+            className="px-6 py-2 rounded-xl bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-[10px] font-black uppercase tracking-widest hover:bg-neon-blue/20 transition-all disabled:opacity-50"
+          >
+            {isGeneratingRecs ? 'Generating...' : 'Get New Picks'}
+          </button>
+        </div>
+
+        {recommendations.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {recommendations.map((rec, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-zinc-900/50 border border-white/5 rounded-3xl p-8 space-y-4 hover:border-neon-blue/30 transition-colors group"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue text-[10px] font-black uppercase tracking-widest border border-neon-blue/20">
+                    {rec.genre}
+                  </span>
+                </div>
+                <h4 className="text-2xl font-black text-white uppercase tracking-tight group-hover:text-neon-blue transition-colors">
+                  {rec.title}
+                </h4>
+                <p className="text-xs font-bold text-gray-500 leading-relaxed italic">
+                  "{rec.reason}"
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        ) : !isGeneratingRecs && (
+          <div className="bg-zinc-900/30 border border-white/5 border-dashed rounded-[3rem] p-12 text-center">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+              {entries.length === 0 ? 'Add some movies to get recommendations!' : 'Click the button above to generate personalized recommendations'}
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* Mood Suggestion Section */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-zinc-900/50 border border-white/5 rounded-[3rem] p-12 space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-neon-pink/10 flex items-center justify-center border border-neon-pink/20 shadow-[0_0_15px_rgba(255,0,255,0.1)]">
+              <Smile className="w-5 h-5 text-neon-pink" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black text-white uppercase tracking-tight">Mood Matcher</h3>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">What are you in the mood for?</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleMoodSubmit} className="space-y-4">
+            <input 
+              type="text"
+              value={mood}
+              onChange={(e) => setMood(e.target.value)}
+              placeholder="e.g. Something dark and mysterious, or a lighthearted comedy..."
+              className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-xs font-bold text-white focus:outline-none focus:border-neon-pink/50 transition-all uppercase tracking-widest placeholder:text-gray-700"
+            />
+            <button 
+              type="submit"
+              disabled={isGeneratingMood || !mood.trim()}
+              className="w-full py-4 bg-neon-pink text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(255,0,255,0.2)]"
+            >
+              {isGeneratingMood ? 'Finding the perfect match...' : 'Find Movie'}
+            </button>
+          </form>
+        </div>
+
+        <div className="bg-zinc-900/50 border border-white/5 rounded-[3rem] p-12 flex flex-col justify-center items-center text-center">
+          {moodSuggestion ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6"
+            >
+              <span className="text-[10px] font-black text-neon-pink uppercase tracking-[0.3em]">Your Perfect Match</span>
+              <h4 className="text-5xl font-black text-white uppercase tracking-tighter leading-none font-display">
+                {moodSuggestion.title}
+              </h4>
+              <p className="text-sm font-bold text-gray-400 max-w-sm mx-auto leading-relaxed">
+                {moodSuggestion.reason}
+              </p>
+            </motion.div>
+          ) : (
+            <div className="space-y-4 opacity-30">
+              <Smile className="w-16 h-16 text-gray-500 mx-auto" />
+              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Tell me your mood to get a suggestion</p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Continue Watching (Only on main dashboard) */}

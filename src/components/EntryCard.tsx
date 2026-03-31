@@ -15,6 +15,9 @@ import { cn } from '../lib/utils';
 export interface EntryCardProps {
   entry: Entry;
   onEdit: (entry: Entry) => void;
+  onSelect?: (entry: Entry) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 const NEON_COLORS = {
@@ -35,7 +38,7 @@ const NEON_GLOWS = {
   'Mini-Series': 'neon-glow-red',
 };
 
-export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
+export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onSelect, isSelected, onToggleSelect }) => {
   const neonColor = NEON_COLORS[entry.type as keyof typeof NEON_COLORS] || 'var(--color-neon-blue)';
   const neonGlow = NEON_GLOWS[entry.type as keyof typeof NEON_GLOWS] || 'neon-glow-blue';
 
@@ -51,11 +54,29 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -12, scale: 1.02 }}
       className={cn(
-        "group relative bg-zinc-900 rounded-[2rem] overflow-hidden border border-white/5 transition-all duration-500",
-        "hover:border-white/20",
+        "group relative bg-zinc-900 rounded-[2rem] overflow-hidden border transition-all duration-500",
+        isSelected ? "border-neon-blue ring-2 ring-neon-blue/50" : "border-white/5 hover:border-white/20",
         neonGlow
       )}
     >
+      {/* Selection Checkbox */}
+      {onToggleSelect && (
+        <div className="absolute top-4 left-4 z-20">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect(entry.id);
+            }}
+            className={cn(
+              "w-6 h-6 rounded-lg border flex items-center justify-center transition-all",
+              isSelected ? "bg-neon-blue border-neon-blue text-black" : "bg-black/40 border-white/20 text-transparent hover:border-white/40"
+            )}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Poster Image Container */}
       <div className="aspect-[2/3] relative overflow-hidden">
         <img 
@@ -71,7 +92,10 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
         
         {/* Type Badge (Neon) */}
         <div 
-          className="absolute top-4 left-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl"
+          className={cn(
+            "absolute top-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl z-10",
+            onToggleSelect ? "left-12" : "left-4"
+          )}
           style={{ 
             backgroundColor: `${neonColor}20`, 
             border: `1px solid ${neonColor}`,
@@ -96,9 +120,12 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
                 className="flex-1 bg-white text-black h-12 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
               >
                 <Play className="w-4 h-4 fill-black" />
-                Edit Entry
+                Edit
               </button>
-              <button className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10">
+              <button 
+                onClick={() => onSelect?.(entry)}
+                className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
+              >
                 <Info className="w-5 h-5" />
               </button>
             </div>
@@ -107,7 +134,10 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit }) => {
       </div>
 
       {/* Content Area */}
-      <div className="p-6 space-y-4">
+      <div 
+        className="p-6 space-y-4 cursor-pointer"
+        onClick={() => onSelect?.(entry)}
+      >
         <div className="space-y-1">
           <div className="flex justify-between items-start">
             <h3 className="text-xl font-black text-white leading-tight line-clamp-1 group-hover:text-neon-blue transition-colors duration-300 font-display uppercase tracking-tight">

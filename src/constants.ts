@@ -24,3 +24,13 @@ export const GENRES = [
   'Psychological', 'Romance', 'Sci-Fi', 'Thriller', 'Western', 'Crime', 
   'Animation', 'Biography', 'History', 'Musical', 'War'
 ];
+
+export const NEON_GLOWS: Record<EntertainmentType, string> = {
+  'Movie': 'neon-glow-blue',
+  'Web Series': 'neon-glow-purple',
+  'Sitcom': 'neon-glow-green',
+  'Anime': 'neon-glow-pink',
+  'Documentary': 'neon-glow-yellow',
+  'Mini-Series': 'neon-glow-red',
+  'Short Film': 'neon-glow-pink',
+};
