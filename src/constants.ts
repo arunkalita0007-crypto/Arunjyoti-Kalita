@@ -34,3 +34,22 @@ export const NEON_GLOWS: Record<EntertainmentType, string> = {
   'Mini-Series': 'neon-glow-red',
   'Short Film': 'neon-glow-pink',
 };
+
+export const BADGE_DEFINITIONS = [
+  { id: 'first-watch', title: 'First Watch', description: 'Watched your first movie', icon: '🎬', requirement: 1, color: 'blue' },
+  { id: 'on-fire', title: 'On Fire', description: 'Watched 5 things in a row', icon: '🔥', requirement: 5, color: 'orange' },
+  { id: 'world-cinema', title: 'World Cinema', description: 'Watched content from 3 different countries', icon: '🌍', requirement: 3, color: 'green' },
+  { id: 'genre-hopper', title: 'Genre Hopper', description: 'Watched 5 different genres', icon: '🎭', requirement: 5, color: 'purple' },
+  { id: 'critic-mode', title: 'Critic Mode', description: 'Rated 10 entries', icon: '⭐', requirement: 10, color: 'yellow' },
+  { id: 'binge-master', title: 'Binge Master', description: 'Completed a full series', icon: '🍿', requirement: 1, color: 'pink' },
+  { id: 'cinephile', title: 'Cinephile', description: 'Watched 30 movies', icon: '👑', requirement: 30, color: 'blue' },
+];
+
+export const MOOD_MAPPINGS = [
+  { label: 'Laugh', emoji: '😂', genres: ['Comedy', 'Animation'] },
+  { label: 'Scared', emoji: '😱', genres: ['Horror', 'Thriller'] },
+  { label: 'Cry', emoji: '😢', genres: ['Drama', 'Romance'] },
+  { label: 'Mind-blown', emoji: '🤯', genres: ['Sci-Fi', 'Mystery', 'Psychological'] },
+  { label: 'Feel Good', emoji: '🥰', genres: ['Romance', 'Musical', 'Adventure'] },
+  { label: 'Adrenaline', emoji: '⚡', genres: ['Action', 'Adventure', 'War'] },
+];

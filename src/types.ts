@@ -57,3 +57,14 @@ export interface Entry {
   posterUrl: string;
   addedAt: string;
 }
+
+export interface Badge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  requirement: number;
+  current: number;
+  unlocked: boolean;
+  color: string;
+}

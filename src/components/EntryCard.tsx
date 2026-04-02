@@ -15,6 +15,7 @@ import { cn } from '../lib/utils';
 export interface EntryCardProps {
   entry: Entry;
   onEdit: (entry: Entry) => void;
+  onUpdate?: (entry: Entry) => void;
   onSelect?: (entry: Entry) => void;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -38,7 +39,7 @@ const NEON_GLOWS = {
   'Mini-Series': 'neon-glow-red',
 };
 
-export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onSelect, isSelected, onToggleSelect }) => {
+export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, onSelect, isSelected, onToggleSelect }) => {
   const neonColor = NEON_COLORS[entry.type as keyof typeof NEON_COLORS] || 'var(--color-neon-blue)';
   const neonGlow = NEON_GLOWS[entry.type as keyof typeof NEON_GLOWS] || 'neon-glow-blue';
 
@@ -114,16 +115,45 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onSelect, i
         {/* Info Overlay on Hover */}
         <div className="absolute inset-0 flex flex-col justify-end p-6 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500">
           <div className="space-y-4">
+            {entry.status === 'Want to Watch' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate?.({ ...entry, status: 'Watching', startDate: new Date().toISOString() });
+                }}
+                className="w-full bg-blue-500 text-white h-12 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                Start Watching
+              </button>
+            )}
+            {entry.status === 'Watching' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate?.({ ...entry, status: 'Completed', watchedDate: new Date().toISOString() });
+                }}
+                className="w-full bg-green-500 text-white h-12 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform shadow-[0_0_20px_rgba(34,197,94,0.4)]"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Mark Completed
+              </button>
+            )}
             <div className="flex gap-2">
               <button 
-                onClick={() => onEdit(entry)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(entry);
+                }}
                 className="flex-1 bg-white text-black h-12 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-transform"
               >
-                <Play className="w-4 h-4 fill-black" />
-                Edit
+                {entry.status === 'Completed' ? 'Edit Review' : 'Edit Details'}
               </button>
               <button 
-                onClick={() => onSelect?.(entry)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect?.(entry);
+                }}
                 className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl text-white flex items-center justify-center hover:bg-white/20 transition-colors border border-white/10"
               >
                 <Info className="w-5 h-5" />
@@ -151,8 +181,8 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onSelect, i
           </div>
         </div>
 
-        {/* Progress Bar for Series */}
-        {isSeries && entry.totalEpisodes && (
+        {/* Progress Bar for Series (Watching) */}
+        {isSeries && entry.totalEpisodes && entry.status === 'Watching' && (
           <div className="space-y-2">
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
               <span className="flex items-center gap-2">
@@ -173,6 +203,29 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onSelect, i
                 }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Rating and Review for Completed */}
+        {entry.status === 'Completed' && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-1 text-yellow-500">
+              {[...Array(5)].map((_, i) => (
+                <Star 
+                  key={i} 
+                  className={cn(
+                    "w-3 h-3",
+                    i < Math.round(entry.myRating / 2) ? "fill-current" : "text-zinc-800"
+                  )} 
+                />
+              ))}
+              <span className="ml-2 text-[10px] font-black text-white">{entry.myRating}/10</span>
+            </div>
+            {entry.review && (
+              <p className="text-xs font-medium text-gray-400 italic line-clamp-2 leading-relaxed">
+                "{entry.review}"
+              </p>
+            )}
           </div>
         )}
 
