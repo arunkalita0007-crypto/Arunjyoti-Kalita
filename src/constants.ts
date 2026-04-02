@@ -130,3 +130,25 @@ export const POPULAR_COUNTRIES = [
   'Norway',
   'Russia'
 ].sort();
+
+export const COUNTRY_NAME_MAPPINGS: Record<string, string> = {
+  'USA': 'United States of America',
+  'UNITED STATES': 'United States of America',
+  'US': 'United States of America',
+  'UK': 'United Kingdom',
+  'UNITED KINGDOM': 'United Kingdom',
+  'UAE': 'United Arab Emirates',
+  'SOUTH KOREA': 'South Korea',
+  'KOREA': 'South Korea',
+  'REPUBLIC OF KOREA': 'South Korea',
+  'NORTH KOREA': 'North Korea',
+  'RUSSIA': 'Russia',
+  'RUSSIAN FEDERATION': 'Russia',
+  'INDIA': 'India',
+};
+
+export const normalizeCountryName = (name: string) => {
+  if (!name) return 'Unknown';
+  const upper = name.trim().toUpperCase();
+  return COUNTRY_NAME_MAPPINGS[upper] || name.trim();
+};

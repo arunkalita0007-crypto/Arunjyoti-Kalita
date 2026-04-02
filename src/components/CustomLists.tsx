@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
@@ -9,7 +9,9 @@ import {
   Search,
   X,
   Edit2,
-  Bookmark
+  Bookmark,
+  PlusCircle,
+  Check
 } from 'lucide-react';
 import { Entry, CustomList } from '../types';
 import { cn } from '../lib/utils';
@@ -24,6 +26,8 @@ interface CustomListsProps {
   onSelectEntry: (entry: Entry) => void;
   onUpdateEntry: (entry: Entry) => void;
   onEditEntry: (entry: Entry) => void;
+  onToggleEntryInList: (listId: string, entryId: string) => void;
+  onAddNew: (listId: string) => void;
 }
 
 const LIST_COLORS = [
@@ -45,33 +49,62 @@ export const CustomLists: React.FC<CustomListsProps> = ({
   onUpdateList,
   onSelectEntry,
   onUpdateEntry,
-  onEditEntry
+  onEditEntry,
+  onToggleEntryInList,
+  onAddNew
 }) => {
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedList, setSelectedList] = useState<CustomList | null>(null);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [isAddingMovies, setIsAddingMovies] = useState(false);
+  const [movieSearchQuery, setMovieSearchQuery] = useState('');
   const [newList, setNewList] = useState({ name: '', description: '', color: LIST_COLORS[0] });
+
+  const selectedList = useMemo(() => 
+    lists.find(l => l.id === selectedListId) || null
+  , [lists, selectedListId]);
 
   const handleCreateList = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newList.name.trim()) return;
 
     const list: CustomList = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingListId || Math.random().toString(36).substr(2, 9),
       name: newList.name,
       description: newList.description,
       color: newList.color,
-      entryIds: [],
-      createdAt: new Date().toISOString(),
+      entryIds: editingListId ? (selectedList?.entryIds || []) : [],
+      createdAt: editingListId ? (selectedList?.createdAt || new Date().toISOString()) : new Date().toISOString(),
     };
 
-    onAddList(list);
+    if (editingListId) {
+      onUpdateList(list);
+    } else {
+      onAddList(list);
+    }
+    
     setIsCreating(false);
+    setEditingListId(null);
     setNewList({ name: '', description: '', color: LIST_COLORS[0] });
+  };
+
+  const handleEditList = (list: CustomList) => {
+    setNewList({ name: list.name, description: list.description, color: list.color });
+    setEditingListId(list.id);
+    setIsCreating(true);
   };
 
   const listEntries = selectedList 
     ? entries.filter(e => selectedList.entryIds.includes(e.id))
     : [];
+
+  const filteredEntriesForAdding = useMemo(() => {
+    if (!movieSearchQuery.trim()) return entries.slice(0, 10);
+    return entries.filter(e => 
+      e.title.toLowerCase().includes(movieSearchQuery.toLowerCase()) ||
+      e.director.toLowerCase().includes(movieSearchQuery.toLowerCase())
+    ).slice(0, 10);
+  }, [entries, movieSearchQuery]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
@@ -81,7 +114,11 @@ export const CustomLists: React.FC<CustomListsProps> = ({
           <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.3em]">Curate your cinematic collections</p>
         </div>
         <button
-          onClick={() => setIsCreating(true)}
+          onClick={() => {
+            setEditingListId(null);
+            setNewList({ name: '', description: '', color: LIST_COLORS[0] });
+            setIsCreating(true);
+          }}
           className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
         >
           <Plus className="w-4 h-4" />
@@ -94,7 +131,7 @@ export const CustomLists: React.FC<CustomListsProps> = ({
           <motion.div
             key={list.id}
             layoutId={list.id}
-            onClick={() => setSelectedList(list)}
+            onClick={() => setSelectedListId(list.id)}
             className="group relative bg-zinc-900/30 border border-white/5 p-8 rounded-[2.5rem] cursor-pointer hover:bg-zinc-900/50 transition-all overflow-hidden"
           >
             <div 
@@ -154,7 +191,7 @@ export const CustomLists: React.FC<CustomListsProps> = ({
         )}
       </div>
 
-      {/* Create List Modal */}
+      {/* Create/Edit List Modal */}
       <AnimatePresence>
         {isCreating && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -162,7 +199,10 @@ export const CustomLists: React.FC<CustomListsProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsCreating(false)}
+              onClick={() => {
+                setIsCreating(false);
+                setEditingListId(null);
+              }}
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
             <motion.div
@@ -176,12 +216,17 @@ export const CustomLists: React.FC<CustomListsProps> = ({
               <form onSubmit={handleCreateList} className="relative z-10 space-y-8">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter font-display">New Collection</h3>
+                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter font-display">
+                      {editingListId ? 'Edit Collection' : 'New Collection'}
+                    </h3>
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Define your cinematic theme</p>
                   </div>
                   <button 
                     type="button"
-                    onClick={() => setIsCreating(false)}
+                    onClick={() => {
+                      setIsCreating(false);
+                      setEditingListId(null);
+                    }}
                     className="p-3 rounded-2xl bg-white/5 text-gray-500 hover:text-white transition-colors"
                   >
                     <X className="w-6 h-6" />
@@ -235,7 +280,7 @@ export const CustomLists: React.FC<CustomListsProps> = ({
                   type="submit"
                   className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_rgba(255,255,255,0.1)]"
                 >
-                  Create Collection
+                  {editingListId ? 'Update Collection' : 'Create Collection'}
                 </button>
               </form>
             </motion.div>
@@ -255,7 +300,7 @@ export const CustomLists: React.FC<CustomListsProps> = ({
             <header className="px-12 py-10 border-b border-white/5 flex items-center justify-between bg-zinc-900/50 backdrop-blur-xl">
               <div className="flex items-center gap-8">
                 <button 
-                  onClick={() => setSelectedList(null)}
+                  onClick={() => setSelectedListId(null)}
                   className="p-4 rounded-2xl bg-white/5 text-gray-400 hover:text-white transition-colors"
                 >
                   <X className="w-6 h-6" />
@@ -272,16 +317,32 @@ export const CustomLists: React.FC<CustomListsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
-                <div className="text-right">
+              <div className="flex items-center gap-4">
+                <div className="text-right mr-4">
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Collection Size</p>
                   <p className="text-2xl font-black text-white">{listEntries.length} Titles</p>
                 </div>
+                
+                <button
+                  onClick={() => setIsAddingMovies(true)}
+                  className="px-6 py-4 bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  Add Titles
+                </button>
+
+                <button
+                  onClick={() => handleEditList(selectedList)}
+                  className="p-4 rounded-2xl bg-white/5 text-gray-400 hover:text-white transition-all border border-white/5"
+                >
+                  <Edit2 className="w-6 h-6" />
+                </button>
+
                 <button
                   onClick={() => {
                     if (window.confirm('Are you sure you want to delete this list?')) {
                       onDeleteList(selectedList.id);
-                      setSelectedList(null);
+                      setSelectedListId(null);
                     }
                   }}
                   className="p-4 rounded-2xl bg-neon-red/10 text-neon-red hover:bg-neon-red hover:text-white transition-all border border-neon-red/20"
@@ -309,12 +370,109 @@ export const CustomLists: React.FC<CustomListsProps> = ({
                   <Film className="w-24 h-24 text-gray-700" />
                   <div className="text-center space-y-2">
                     <h4 className="text-2xl font-black text-white uppercase tracking-tight">Empty Collection</h4>
-                    <p className="text-sm font-medium text-gray-500">Add titles to this list from their detail view.</p>
+                    <p className="text-sm font-medium text-gray-500">Add titles to this list from their detail view or use the button above.</p>
                   </div>
                 </div>
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Movies Modal */}
+      <AnimatePresence>
+        {isAddingMovies && selectedList && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddingMovies(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative z-10 w-full max-w-2xl bg-zinc-900 rounded-[3rem] border border-white/10 p-12 space-y-8 shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black text-white uppercase tracking-tighter font-display">Add to {selectedList.name}</h3>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Search your library or log something new</p>
+                </div>
+                <button 
+                  onClick={() => setIsAddingMovies(false)}
+                  className="p-3 rounded-2xl bg-white/5 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="relative">
+                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input 
+                    type="text"
+                    value={movieSearchQuery}
+                    onChange={e => setMovieSearchQuery(e.target.value)}
+                    placeholder="Search by title or director..."
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl pl-16 pr-6 py-5 text-white focus:outline-none focus:border-blue-500 transition-all font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2">
+                  {filteredEntriesForAdding.map(entry => {
+                    const isInList = selectedList.entryIds.includes(entry.id);
+                    return (
+                      <div 
+                        key={entry.id}
+                        className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <img src={entry.posterUrl} alt="" className="w-10 h-14 object-cover rounded-lg border border-white/10" referrerPolicy="no-referrer" />
+                          <div>
+                            <p className="text-sm font-black text-white uppercase tracking-tight">{entry.title}</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{entry.year} • {entry.director}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => onToggleEntryInList(selectedList.id, entry.id)}
+                          className={cn(
+                            "p-3 rounded-xl transition-all",
+                            isInList 
+                              ? "bg-blue-500 text-white shadow-lg" 
+                              : "bg-white/5 text-gray-500 hover:text-white hover:bg-white/10"
+                          )}
+                        >
+                          {isInList ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {filteredEntriesForAdding.length === 0 && (
+                    <div className="py-12 text-center space-y-4">
+                      <Film className="w-12 h-12 text-gray-700 mx-auto" />
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">No matching titles found.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-6 border-t border-white/5">
+                  <button
+                    onClick={() => {
+                      onAddNew(selectedList.id);
+                      setIsAddingMovies(false);
+                    }}
+                    className="w-full py-5 bg-white/5 text-white border border-white/10 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Log New Movie to Library
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

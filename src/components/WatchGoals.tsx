@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Target, Plus, X, CheckCircle, Clock, ChevronRight, Sparkles, TrendingUp, Trash2 } from 'lucide-react';
+import { Target, Plus, X, CheckCircle, Clock, ChevronRight, Sparkles, TrendingUp, Trash2, Edit2, PlusCircle } from 'lucide-react';
 import { Goal, Entry } from '../types';
-import { GENRES } from '../constants';
+import { GENRES, POPULAR_COUNTRIES, normalizeCountryName } from '../constants';
 import { cn } from '../lib/utils';
 import confetti from 'canvas-confetti';
 
@@ -15,10 +15,12 @@ interface WatchGoalsProps {
 
 export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoalsProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [newGoal, setNewGoal] = useState<Partial<Goal>>({
     type: 'Movies',
     target: 4,
-    period: 'Monthly'
+    period: 'Monthly',
+    manualOffset: 0
   });
 
   const activeGoals = useMemo(() => {
@@ -37,20 +39,30 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
 
       switch(goal.type) {
         case 'Movies':
-          current = periodEntries.filter(e => e.type === 'Movie').length;
+          current = periodEntries.filter(e => {
+            const isMovie = e.type === 'Movie';
+            const matchesGenre = !goal.genre || e.genre === goal.genre;
+            const matchesCountry = !goal.country || normalizeCountryName(e.country) === normalizeCountryName(goal.country);
+            return isMovie && matchesGenre && matchesCountry;
+          }).length;
           break;
         case 'Series':
-          current = periodEntries.filter(e => e.type === 'Web Series' || e.type === 'Mini-Series' || e.type === 'Sitcom').length;
+          current = periodEntries.filter(e => {
+            const isSeries = e.type === 'Web Series' || e.type === 'Mini-Series' || e.type === 'Sitcom';
+            const matchesGenre = !goal.genre || e.genre === goal.genre;
+            const matchesCountry = !goal.country || normalizeCountryName(e.country) === normalizeCountryName(goal.country);
+            return isSeries && matchesGenre && matchesCountry;
+          }).length;
           break;
         case 'Genres':
           current = new Set(periodEntries.map(e => e.genre)).size;
           break;
         case 'Country':
-          current = new Set(periodEntries.map(e => e.country)).size;
+          current = new Set(periodEntries.map(e => normalizeCountryName(e.country))).size;
           break;
       }
 
-      return { ...goal, current };
+      return { ...goal, current: current + (goal.manualOffset || 0) };
     });
   }, [goals, entries]);
 
@@ -58,10 +70,11 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
 
   const handleAddGoal = () => {
     const goal: Goal = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingGoalId || Math.random().toString(36).substr(2, 9),
       type: newGoal.type as any,
       target: newGoal.target || 1,
       current: 0,
+      manualOffset: newGoal.manualOffset || 0,
       period: newGoal.period as any,
       notes: newGoal.notes,
       createdAt: new Date().toISOString(),
@@ -70,6 +83,21 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
     };
     onAddGoal(goal);
     setIsFormOpen(false);
+    setEditingGoalId(null);
+    setNewGoal({ type: 'Movies', target: 4, period: 'Monthly', manualOffset: 0 });
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setNewGoal(goal);
+    setEditingGoalId(goal.id);
+    setIsFormOpen(true);
+  };
+
+  const handleIncrementManual = (goal: Goal) => {
+    onAddGoal({
+      ...goal,
+      manualOffset: (goal.manualOffset || 0) + 1
+    });
   };
 
   const checkCompletion = (goal: Goal) => {
@@ -97,7 +125,11 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
           <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] ml-16">Set targets and conquer your watchlist</p>
         </div>
         <button
-          onClick={() => setIsFormOpen(true)}
+          onClick={() => {
+            setEditingGoalId(null);
+            setNewGoal({ type: 'Movies', target: 4, period: 'Monthly', manualOffset: 0 });
+            setIsFormOpen(true);
+          }}
           className="h-14 px-8 bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl"
         >
           <Plus className="w-4 h-4" />
@@ -131,18 +163,26 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
                       {isCompleted && <Sparkles className="w-3 h-3 text-yellow-500 animate-pulse" />}
                     </div>
                     <h3 className="text-2xl font-black text-white uppercase tracking-tight font-display">
-                      {goal.type === 'Movies' && `Watch ${goal.target} Movies`}
-                      {goal.type === 'Series' && `Finish ${goal.target} Series`}
+                      {goal.type === 'Movies' && `Watch ${goal.target} ${goal.genre || ''} Movies ${goal.country ? `from ${goal.country}` : ''}`}
+                      {goal.type === 'Series' && `Finish ${goal.target} ${goal.genre || ''} Series ${goal.country ? `from ${goal.country}` : ''}`}
                       {goal.type === 'Genres' && `Explore ${goal.target} Genres`}
                       {goal.type === 'Country' && `Watch from ${goal.target} Countries`}
                     </h3>
                   </div>
-                  <button 
-                    onClick={() => onDeleteGoal(goal.id)}
-                    className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleEditGoal(goal)}
+                      className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-blue-500 hover:bg-blue-500/10 transition-all"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => onDeleteGoal(goal.id)}
+                      className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-4 relative z-10">
@@ -151,7 +191,16 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
                       <span className="text-4xl font-black text-white">{goal.current}</span>
                       <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">/ {goal.target}</span>
                     </div>
-                    <span className="text-xs font-black text-blue-500 uppercase tracking-widest">{Math.round(progress)}%</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs font-black text-blue-500 uppercase tracking-widest">{Math.round(progress)}%</span>
+                      <button 
+                        onClick={() => handleIncrementManual(goal)}
+                        className="flex items-center gap-1 text-[8px] font-black text-gray-500 uppercase tracking-widest hover:text-blue-500 transition-colors"
+                      >
+                        <PlusCircle className="w-3 h-3" />
+                        Manual +1
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
@@ -242,7 +291,9 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
               className="relative z-10 w-full max-w-lg bg-zinc-900 rounded-[3rem] border border-white/10 p-12 space-y-8 shadow-2xl"
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tight font-display">New Goal</h2>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tight font-display">
+                  {editingGoalId ? 'Edit Goal' : 'New Goal'}
+                </h2>
                 <button onClick={() => setIsFormOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-colors">
                   <X className="w-5 h-5" />
                 </button>
@@ -262,6 +313,33 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
                     <option value="Country">Watch from Countries</option>
                   </select>
                 </div>
+
+                {(newGoal.type === 'Movies' || newGoal.type === 'Series') && (
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Genre Filter (Optional)</label>
+                      <select
+                        value={newGoal.genre || ''}
+                        onChange={(e) => setNewGoal({ ...newGoal, genre: e.target.value || undefined })}
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none"
+                      >
+                        <option value="">All Genres</option>
+                        {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Country Filter (Optional)</label>
+                      <select
+                        value={newGoal.country || ''}
+                        onChange={(e) => setNewGoal({ ...newGoal, country: e.target.value || undefined })}
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none"
+                      >
+                        <option value="">All Countries</option>
+                        {POPULAR_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -302,7 +380,7 @@ export function WatchGoals({ entries, goals, onAddGoal, onDeleteGoal }: WatchGoa
                 onClick={handleAddGoal}
                 className="w-full bg-blue-500 text-white h-16 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
               >
-                Create Goal
+                {editingGoalId ? 'Update Goal' : 'Create Goal'}
               </button>
             </motion.div>
           </div>

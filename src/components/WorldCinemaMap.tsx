@@ -5,6 +5,7 @@ import * as d3 from 'd3-geo';
 import { feature } from 'topojson-client';
 import { Entry } from '../types';
 import { cn } from '../lib/utils';
+import { COUNTRY_NAME_MAPPINGS, normalizeCountryName } from '../constants';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -35,8 +36,8 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
 
   const countryStats = useMemo(() => {
     const stats: Record<string, Entry[]> = {};
-    entries.filter(e => e.status === 'Completed').forEach(entry => {
-      const country = entry.country;
+    entries.filter(e => e.status !== 'Want to Watch').forEach(entry => {
+      const country = normalizeCountryName(entry.country);
       if (!stats[country]) stats[country] = [];
       stats[country].push(entry);
     });
@@ -51,8 +52,8 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
 
   const getCountryColor = (count: number) => {
     if (count === 0) return "#18181b";
-    if (count < 3) return "#3b82f640";
-    if (count < 10) return "#3b82f680";
+    if (count < 3) return "#3b82f680"; // Increased opacity
+    if (count < 10) return "#3b82f6cc"; // Increased opacity
     return "#3b82f6";
   };
 
@@ -94,10 +95,17 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
               </div>
             ) : (
               <svg viewBox="0 0 800 450" className="w-full h-full">
+                <defs>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
                 <g>
                   {geographies.map((geo, i) => {
-                    const countryName = geo.properties.name;
-                    const count = countryStats[countryName]?.length || 0;
+                    const countryName = geo.properties.name || geo.properties.NAME || geo.properties.admin || "Unknown";
+                    const normalizedName = normalizeCountryName(countryName);
+                    const count = countryStats[normalizedName]?.length || 0;
                     const d = pathGenerator(geo);
                     if (!d) return null;
 
@@ -106,12 +114,13 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
                         key={geo.id || i}
                         d={d}
                         fill={getCountryColor(count)}
-                        stroke="#ffffff10"
-                        strokeWidth={0.5}
-                        className="transition-colors duration-300 cursor-pointer hover:fill-blue-500"
+                        stroke={count > 0 ? "#3b82f640" : "#ffffff10"}
+                        strokeWidth={count > 0 ? 1 : 0.5}
+                        filter={count > 0 ? "url(#glow)" : "none"}
+                        className="transition-all duration-300 cursor-pointer hover:fill-blue-500 hover:stroke-blue-400"
                         onMouseEnter={() => setTooltipContent(`${countryName}: ${count} watched`)}
                         onMouseLeave={() => setTooltipContent("")}
-                        onClick={() => setSelectedCountry(countryName)}
+                        onClick={() => setSelectedCountry(normalizedName)}
                       />
                     );
                   })}
@@ -164,8 +173,12 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
                 <h3 className="text-xl font-black text-white uppercase tracking-tight font-display">Suggestions</h3>
               </div>
               <div className="space-y-3">
-                {['South Korea', 'France', 'Japan', 'Brazil'].filter(c => !countryStats[c]).map(country => (
-                  <div key={country} className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 group hover:bg-black/40 transition-all cursor-pointer">
+                {['South Korea', 'France', 'Japan', 'Brazil', 'India'].filter(c => !countryStats[normalizeCountryName(c)]).map(country => (
+                  <div 
+                    key={country} 
+                    onClick={() => setSelectedCountry(normalizeCountryName(country))}
+                    className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 group hover:bg-black/40 transition-all cursor-pointer"
+                  >
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-white">{country}</span>
                     <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-blue-500" />
                   </div>

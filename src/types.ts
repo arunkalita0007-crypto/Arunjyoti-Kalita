@@ -102,6 +102,7 @@ export interface Goal {
   type: 'Movies' | 'Series' | 'Genres' | 'Country';
   target: number;
   current: number;
+  manualOffset?: number;
   period: 'Weekly' | 'Monthly';
   notes?: string;
   createdAt: string;

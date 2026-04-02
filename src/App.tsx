@@ -44,6 +44,7 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [journalEntry, setJournalEntry] = useState<Entry | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
+  const [pendingListId, setPendingListId] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('cinetrack_entries', JSON.stringify(entries));
@@ -68,6 +69,10 @@ export default function App() {
 
   const handleAddEntry = (newEntry: Entry) => {
     setEntries(prev => [newEntry, ...prev]);
+    if (pendingListId) {
+      handleToggleEntryInList(pendingListId, newEntry.id);
+      setPendingListId(null);
+    }
   };
 
   const handleUpdateEntry = (updatedEntry: Entry) => {
@@ -146,6 +151,7 @@ export default function App() {
 
   const handleEditEntry = (entry: Entry) => {
     setEditingEntry(entry);
+    setPendingListId(null);
     setIsFormOpen(true);
   };
 
@@ -271,6 +277,11 @@ export default function App() {
             onSelectEntry={setSelectedEntry}
             onUpdateEntry={handleUpdateEntry}
             onEditEntry={handleEditEntry}
+            onToggleEntryInList={handleToggleEntryInList}
+            onAddNew={(listId) => {
+              setPendingListId(listId);
+              setIsFormOpen(true);
+            }}
           />
         );
       case 'arena':
@@ -325,7 +336,11 @@ export default function App() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsFormOpen(true)}
+              onClick={() => {
+                setEditingEntry(null);
+                setPendingListId(null);
+                setIsFormOpen(true);
+              }}
               className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
             >
               <Plus className="w-6 h-6" />
