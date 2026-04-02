@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
-import { Entry } from './types';
-import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus } from 'lucide-react';
+import { Entry, Goal, CustomList } from './types';
+import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus, Book, Target, Globe, TrendingUp, Globe2, Clock, MapPin, Plane, List } from 'lucide-react';
 import { cn } from './lib/utils';
 import { QuickLog } from './components/QuickLog';
 import { CinematicWrapped } from './components/CinematicWrapped';
@@ -10,9 +10,19 @@ import { ChallengeTracker } from './components/ChallengeTracker';
 import { motion, AnimatePresence } from 'motion/react';
 import { DetailView } from './components/DetailView';
 import { EntryForm } from './components/EntryForm';
+import { MoodMusicPlayer } from './components/MoodMusicPlayer';
+import { JournalModal } from './components/JournalModal';
+import { MyJournal } from './components/MyJournal';
+import { DailyPick } from './components/DailyPick';
+import { WatchGoals } from './components/WatchGoals';
+import { WorldCinemaMap } from './components/WorldCinemaMap';
+import { TasteEvolution } from './components/TasteEvolution';
+import { DirectorProfile } from './components/DirectorProfile';
+import { WeeklyChallenge } from './components/WeeklyChallenge';
+import { CustomLists } from './components/CustomLists';
 import { STARTER_MOVIES } from './data/starterMovies';
 
-type Tab = 'dashboard' | 'watchlist' | 'profile' | 'challenge';
+type Tab = 'dashboard' | 'watchlist' | 'journal' | 'goals' | 'map' | 'evolution' | 'arena' | 'challenge' | 'profile' | 'lists';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -20,23 +30,56 @@ export default function App() {
     const saved = localStorage.getItem('cinetrack_entries');
     return saved ? JSON.parse(saved) : STARTER_MOVIES;
   });
+  const [goals, setGoals] = useState<Goal[]>(() => {
+    const saved = localStorage.getItem('cinetrack_goals');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [customLists, setCustomLists] = useState<CustomList[]>(() => {
+    const saved = localStorage.getItem('cinetrack_lists');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showWrapped, setShowWrapped] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [journalEntry, setJournalEntry] = useState<Entry | null>(null);
+  const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('cinetrack_entries', JSON.stringify(entries));
   }, [entries]);
+
+  useEffect(() => {
+    localStorage.setItem('cinetrack_goals', JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem('cinetrack_lists', JSON.stringify(customLists));
+  }, [customLists]);
+
+  // Handle global director click
+  useEffect(() => {
+    const handleDirectorClick = (e: any) => {
+      setSelectedDirector(e.detail);
+    };
+    window.addEventListener('cinetrack_director_click', handleDirectorClick);
+    return () => window.removeEventListener('cinetrack_director_click', handleDirectorClick);
+  }, []);
 
   const handleAddEntry = (newEntry: Entry) => {
     setEntries(prev => [newEntry, ...prev]);
   };
 
   const handleUpdateEntry = (updatedEntry: Entry) => {
+    const oldEntry = entries.find(e => e.id === updatedEntry.id);
     setEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e));
     setIsFormOpen(false);
     setEditingEntry(null);
+
+    // Trigger journal modal if status changed to Completed
+    if (oldEntry?.status !== 'Completed' && updatedEntry.status === 'Completed') {
+      setJournalEntry(updatedEntry);
+    }
   };
 
   const handleDeleteEntry = (id: string) => {
@@ -45,12 +88,60 @@ export default function App() {
     setEditingEntry(null);
   };
 
+  const handleAddGoal = (goal: Goal) => {
+    setGoals(prev => {
+      const existing = prev.findIndex(g => g.id === goal.id);
+      if (existing !== -1) {
+        return prev.map(g => g.id === goal.id ? goal : g);
+      }
+      return [goal, ...prev];
+    });
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
+  };
+
   const handleBulkUpdate = (ids: string[], status: Entry['status']) => {
-    setEntries(prev => prev.map(e => ids.includes(e.id) ? { ...e, status, watchedDate: status === 'Completed' ? new Date().toISOString() : e.watchedDate } : e));
+    const updatedEntries = entries.map(e => ids.includes(e.id) ? { ...e, status, watchedDate: status === 'Completed' ? new Date().toISOString() : e.watchedDate } : e);
+    setEntries(updatedEntries);
+
+    // If multiple completed, just pick the first one for the journal modal for now
+    const newlyCompleted = updatedEntries.find(e => ids.includes(e.id) && status === 'Completed');
+    if (newlyCompleted) {
+      setJournalEntry(newlyCompleted);
+    }
   };
 
   const handleBulkDelete = (ids: string[]) => {
     setEntries(prev => prev.filter(e => !ids.includes(e.id)));
+  };
+
+  const handleAddList = (list: CustomList) => {
+    setCustomLists(prev => [list, ...prev]);
+  };
+
+  const handleDeleteList = (id: string) => {
+    setCustomLists(prev => prev.filter(l => l.id !== id));
+  };
+
+  const handleUpdateList = (updatedList: CustomList) => {
+    setCustomLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
+  };
+
+  const handleToggleEntryInList = (listId: string, entryId: string) => {
+    setCustomLists(prev => prev.map(list => {
+      if (list.id === listId) {
+        const isInList = list.entryIds.includes(entryId);
+        return {
+          ...list,
+          entryIds: isInList 
+            ? list.entryIds.filter(id => id !== entryId)
+            : [...list.entryIds, entryId]
+        };
+      }
+      return list;
+    }));
   };
 
   const handleEditEntry = (entry: Entry) => {
@@ -62,16 +153,23 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <Dashboard 
-            entries={entries} 
-            onUpdate={handleUpdateEntry} 
-            onDelete={handleDeleteEntry}
-            onBulkUpdate={handleBulkUpdate}
-            onBulkDelete={handleBulkDelete}
-            onAdd={handleAddEntry}
-            onEdit={handleEditEntry}
-            onSelect={setSelectedEntry}
-          />
+          <div className="space-y-12">
+            <DailyPick 
+              entries={entries} 
+              onStartWatching={(entry) => handleUpdateEntry({ ...entry, status: 'Watching' })}
+              onSelect={setSelectedEntry}
+            />
+            <Dashboard 
+              entries={entries} 
+              onUpdate={handleUpdateEntry} 
+              onDelete={handleDeleteEntry}
+              onBulkUpdate={handleBulkUpdate}
+              onBulkDelete={handleBulkDelete}
+              onAdd={handleAddEntry}
+              onEdit={handleEditEntry}
+              onSelect={setSelectedEntry}
+            />
+          </div>
         );
       case 'watchlist':
         return (
@@ -145,6 +243,42 @@ export default function App() {
             <ChallengeTracker entries={entries} />
           </div>
         );
+      case 'journal':
+        return <MyJournal entries={entries} onSelect={setSelectedEntry} />;
+      case 'goals':
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <WatchGoals 
+              entries={entries} 
+              goals={goals} 
+              onAddGoal={handleAddGoal} 
+              onDeleteGoal={handleDeleteGoal} 
+            />
+          </div>
+        );
+      case 'map':
+        return <WorldCinemaMap entries={entries} onSelect={setSelectedEntry} />;
+      case 'evolution':
+        return <TasteEvolution entries={entries} />;
+      case 'lists':
+        return (
+          <CustomLists 
+            entries={entries} 
+            lists={customLists}
+            onAddList={handleAddList}
+            onDeleteList={handleDeleteList}
+            onUpdateList={handleUpdateList}
+            onSelectEntry={setSelectedEntry}
+            onUpdateEntry={handleUpdateEntry}
+            onEditEntry={handleEditEntry}
+          />
+        );
+      case 'arena':
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <WeeklyChallenge entries={entries} />
+          </div>
+        );
       default:
         return null;
     }
@@ -164,7 +298,13 @@ export default function App() {
             {[
               { id: 'dashboard', icon: LayoutDashboard, label: 'Feed' },
               { id: 'watchlist', icon: Bookmark, label: 'Watchlist' },
-              { id: 'challenge', icon: Trophy, label: 'Challenge' },
+              { id: 'lists', icon: List, label: 'Lists' },
+              { id: 'journal', icon: Book, label: 'Journal' },
+              { id: 'goals', icon: Target, label: 'Goals' },
+              { id: 'map', icon: Globe, label: 'Map' },
+              { id: 'evolution', icon: TrendingUp, label: 'Evolution' },
+              { id: 'arena', icon: Trophy, label: 'Arena' },
+              { id: 'challenge', icon: Calendar, label: '30 Day' },
               { id: 'profile', icon: User, label: 'Profile' },
             ].map((tab) => (
               <button
@@ -209,6 +349,32 @@ export default function App() {
       </main>
 
       <QuickLog onSave={handleAddEntry} />
+      <MoodMusicPlayer />
+
+      <AnimatePresence>
+        {journalEntry && (
+          <JournalModal 
+            entry={journalEntry} 
+            onSave={(updated) => {
+              handleUpdateEntry(updated);
+              setJournalEntry(null);
+            }}
+            onClose={() => setJournalEntry(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedDirector && (
+          <DirectorProfile 
+            directorName={selectedDirector} 
+            entries={entries} 
+            onClose={() => setSelectedDirector(null)}
+            onAddEntry={handleAddEntry}
+            onSelectDirector={setSelectedDirector}
+          />
+        )}
+      </AnimatePresence>
 
       {showWrapped && (
         <CinematicWrapped entries={entries} onClose={() => setShowWrapped(false)} />
@@ -219,11 +385,13 @@ export default function App() {
         {selectedEntry && (
           <DetailView 
             entry={selectedEntry} 
+            lists={customLists}
             onClose={() => setSelectedEntry(null)}
             onEdit={() => {
               handleEditEntry(selectedEntry);
               setSelectedEntry(null);
             }}
+            onToggleList={handleToggleEntryInList}
           />
         )}
       </AnimatePresence>

@@ -8,6 +8,7 @@ import { EntryCard } from './EntryCard';
 import { MoodPicker } from './MoodPicker';
 import { WatchTimeline } from './WatchTimeline';
 import { SurpriseMe } from './SurpriseMe';
+import { StarRating } from './StarRating';
 
 interface DashboardProps {
   entries: Entry[];
@@ -36,10 +37,23 @@ export function Dashboard({
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>(initialFilter || 'All');
   const [typeFilter, setTypeFilter] = useState<EntertainmentType | 'All'>('All');
   const [genreFilter, setGenreFilter] = useState<string | 'All'>('All');
-  const [sortBy, setSortBy] = useState<'addedAt' | 'myRating' | 'year'>('addedAt');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [tagFilter, setTagFilter] = useState<string | 'All'>('All');
+  const [sortBy, setSortBy] = useState<'addedAt' | 'myRating' | 'yearDesc' | 'yearAsc' | 'imdbRating' | 'actor' | 'actress'>('actor');
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeMoodGenres, setActiveMoodGenres] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Sync genre filter with MoodMusicPlayer
+  React.useEffect(() => {
+    if (genreFilter !== 'All') {
+      window.dispatchEvent(new CustomEvent('cinetrack_genre_change', { detail: genreFilter }));
+    } else if (activeMoodGenres.length > 0) {
+      window.dispatchEvent(new CustomEvent('cinetrack_genre_change', { detail: activeMoodGenres[0] }));
+    } else {
+      window.dispatchEvent(new CustomEvent('cinetrack_genre_change', { detail: 'All' }));
+    }
+  }, [genreFilter, activeMoodGenres]);
 
   const { currentlyWatching, recentlyCompleted, wantToWatch } = useMemo(() => {
     const base = entries.filter(entry => {
@@ -48,26 +62,47 @@ export function Dashboard({
                           entry.leadActor.toLowerCase().includes(search.toLowerCase());
       const matchesType = typeFilter === 'All' ? true : entry.type === typeFilter;
       const matchesGenre = genreFilter === 'All' ? true : entry.genre === genreFilter;
+      const matchesTag = tagFilter === 'All' ? true : entry.tags?.includes(tagFilter);
       const matchesMood = activeMoodGenres.length === 0 ? true : activeMoodGenres.includes(entry.genre);
       
-      return matchesSearch && matchesType && matchesGenre && matchesMood;
+      return matchesSearch && matchesType && matchesGenre && matchesTag && matchesMood;
     });
 
-    const watching = base.filter(e => e.status === 'Watching');
-    const completed = base.filter(e => e.status === 'Completed')
-      .sort((a, b) => new Date(b.watchedDate || 0).getTime() - new Date(a.watchedDate || 0).getTime());
-    const want = base.filter(e => e.status === 'Want to Watch')
-      .sort((a, b) => b.imdbRating - a.imdbRating);
+    const sortFn = (a: Entry, b: Entry) => {
+      switch (sortBy) {
+        case 'myRating': return b.myRating - a.myRating;
+        case 'imdbRating': return b.imdbRating - a.imdbRating;
+        case 'yearDesc': return b.year - a.year;
+        case 'yearAsc': return a.year - b.year;
+        case 'actor': return a.leadActor.localeCompare(b.leadActor) || a.leadActress.localeCompare(b.leadActress);
+        case 'actress': return a.leadActress.localeCompare(b.leadActress) || a.leadActor.localeCompare(b.leadActor);
+        case 'addedAt':
+        default:
+          return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+      }
+    };
 
-    // Apply status filter if not 'All'
+    const watching = base.filter(e => e.status === 'Watching').sort(sortFn);
+    
+    // Recently Completed usually stays sorted by watchedDate unless a specific sort is picked
+    const completed = base.filter(e => e.status === 'Completed');
+    const sortedCompleted = (sortBy === 'addedAt') 
+      ? [...completed].sort((a, b) => new Date(b.watchedDate || 0).getTime() - new Date(a.watchedDate || 0).getTime())
+      : [...completed].sort(sortFn);
+
+    const want = base.filter(e => e.status === 'Want to Watch');
+    const sortedWant = (sortBy === 'addedAt')
+      ? [...want].sort((a, b) => b.imdbRating - a.imdbRating) // Default for Want to Watch is IMDb
+      : [...want].sort(sortFn);
+
     return {
       currentlyWatching: (statusFilter === 'All' || statusFilter === 'Watching') ? watching : [],
       recentlyCompleted: (statusFilter === 'All' || statusFilter === 'Completed') 
-        ? (statusFilter === 'All' ? completed.slice(0, 5) : completed) 
+        ? (statusFilter === 'All' ? sortedCompleted.slice(0, 5) : sortedCompleted) 
         : [],
-      wantToWatch: (statusFilter === 'All' || statusFilter === 'Want to Watch') ? want : []
+      wantToWatch: (statusFilter === 'All' || statusFilter === 'Want to Watch') ? sortedWant : []
     };
-  }, [entries, search, statusFilter, typeFilter, genreFilter, activeMoodGenres]);
+  }, [entries, search, statusFilter, typeFilter, genreFilter, activeMoodGenres, sortBy]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -76,6 +111,19 @@ export function Dashboard({
   const handleMoodSelect = (genres: string[]) => {
     setActiveMoodGenres(genres);
   };
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    entries.forEach(e => e.tags?.forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [entries]);
+
+  const activities = useMemo(() => {
+    return entries
+      .filter(e => e.status === 'Completed')
+      .sort((a, b) => new Date(b.watchedDate || 0).getTime() - new Date(a.watchedDate || 0).getTime())
+      .slice(0, 5);
+  }, [entries]);
 
   const avgRating = entries.filter(e => e.myRating > 0).length > 0
     ? (entries.reduce((acc, curr) => acc + curr.myRating, 0) / entries.filter(e => e.myRating > 0).length).toFixed(1)
@@ -184,6 +232,10 @@ export function Dashboard({
         {/* Sidebar Filters */}
         <aside className="lg:col-span-1 space-y-12">
           <div className="space-y-8 sticky top-32">
+            <div className="pb-8 border-b border-white/5">
+              <SurpriseMe entries={entries} onSelect={onSelect} />
+            </div>
+
             <div className="space-y-4">
               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Search</h4>
               <div className="relative group">
@@ -235,20 +287,61 @@ export function Dashboard({
             </div>
 
             <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Genre</h4>
+              <select
+                value={genreFilter}
+                onChange={(e) => setGenreFilter(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
+              >
+                <option value="All">All Genres</option>
+                {GENRES.map(genre => (
+                  <option key={genre} value={genre}>{genre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Tags</h4>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setTagFilter('All')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    tagFilter === 'All' ? "bg-neon-blue text-black" : "bg-zinc-900/50 text-gray-500 hover:text-white"
+                  )}
+                >
+                  All
+                </button>
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => setTagFilter(tag)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                      tagFilter === tag ? "bg-neon-blue text-black" : "bg-zinc-900/50 text-gray-500 hover:text-white"
+                    )}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
               <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Sort By</h4>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none"
+                className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
               >
-                <option value="addedAt">Recently Added</option>
-                <option value="myRating">Highest Rated</option>
-                <option value="year">Release Year</option>
+                <option value="addedAt">Default (Priority)</option>
+                <option value="imdbRating">IMDb Rating</option>
+                <option value="myRating">My Rating</option>
+                <option value="yearDesc">Year (Newest)</option>
+                <option value="yearAsc">Year (Oldest)</option>
+                <option value="actor">Lead Actor (A-Z)</option>
+                <option value="actress">Lead Actress (A-Z)</option>
               </select>
-            </div>
-
-            <div className="pt-8 border-t border-white/5">
-              <SurpriseMe entries={entries} onSelect={onSelect} />
             </div>
           </div>
         </aside>
@@ -357,8 +450,43 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Timeline Section */}
-      <WatchTimeline entries={entries} onSelect={onSelect} />
+          {/* Timeline Section */}
+          <WatchTimeline entries={entries} onSelect={onSelect} />
+
+          {/* Activity Feed */}
+          <section className="space-y-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-neon-green/10 border border-neon-green/20 shadow-lg">
+                <Sparkles className="w-6 h-6 text-neon-green" />
+              </div>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tight font-display">Recent Activity</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activities.map((activity, i) => (
+                <motion.div
+                  key={activity.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  onClick={() => onSelect(activity)}
+                  className="group bg-zinc-900/30 border border-white/5 p-6 rounded-[2rem] cursor-pointer hover:bg-zinc-900/50 transition-all flex items-center gap-6"
+                >
+                  <div className="w-16 h-24 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                    <img src={activity.posterUrl} alt={activity.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-neon-green uppercase tracking-widest">Just Watched</p>
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight line-clamp-1">{activity.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <StarRating rating={activity.myRating} size={10} />
+                      <span className="text-[10px] font-bold text-gray-500">{new Date(activity.watchedDate || '').toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </section>
     </div>
   );
 }

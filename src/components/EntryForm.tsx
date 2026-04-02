@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Save, 
   Trash2, 
   Image as ImageIcon,
   Star,
-  Info
+  Info,
+  Plus,
+  Tag,
+  History,
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
-import { Entry, EntertainmentType, Status, Platform, Mood, BasedOn } from '../types';
+import { Entry, EntertainmentType, Status, Platform, Mood, BasedOn, WatchSession } from '../types';
 import { 
   TYPE_OPTIONS, 
   STATUS_OPTIONS, 
   PLATFORM_OPTIONS, 
   MOOD_OPTIONS, 
   BASED_ON_OPTIONS,
-  GENRES
+  GENRES,
+  NANO_GENRES,
+  POPULAR_TAGS
 } from '../constants';
 import { cn } from '../lib/utils';
+import { StarRating } from './StarRating';
 
 interface EntryFormProps {
   entry?: Entry | null;
@@ -34,6 +42,8 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
     director: '',
     genre: 'Action',
     subGenre: '',
+    nanoGenres: [],
+    tags: [],
     leadActor: '',
     leadActress: '',
     supportingActor: '',
@@ -50,8 +60,11 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
     basedOn: 'Original',
     review: '',
     posterUrl: '',
+    watchHistory: [],
     ...entry
   });
+
+  const [newTag, setNewTag] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -66,9 +79,51 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
     }));
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
+  const handleAddTag = (tag: string) => {
+    const cleanTag = tag.trim().replace(/^#/, '');
+    if (cleanTag && !formData.tags?.includes(cleanTag)) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...(prev.tags || []), cleanTag]
+      }));
+    }
+    setNewTag('');
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags?.filter(t => t !== tag)
+    }));
+  };
+
+  const toggleNanoGenre = (genre: string) => {
+    setFormData(prev => {
+      const current = prev.nanoGenres || [];
+      if (current.includes(genre)) {
+        return { ...prev, nanoGenres: current.filter(g => g !== genre) };
+      }
+      return { ...prev, nanoGenres: [...current, genre] };
+    });
+  };
+
+  const handleAddWatchSession = () => {
+    const newSession: WatchSession = {
+      date: new Date().toISOString(),
+      rating: formData.myRating || 0,
+      notes: ''
+    };
+    setFormData(prev => ({
+      ...prev,
+      watchHistory: [...(prev.watchHistory || []), newSession]
+    }));
+  };
+
+  const handleRemoveWatchSession = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      watchHistory: prev.watchHistory?.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -76,14 +131,30 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
     const isCompleted = formData.status === 'Completed';
     const wasCompleted = entry?.status === 'Completed';
     
-    onSave({
+    const finalEntry = {
       ...formData,
       id: entry?.id || Math.random().toString(36).substr(2, 9),
       addedAt: entry?.addedAt || new Date().toISOString(),
       watchedDate: isCompleted && !wasCompleted 
         ? new Date().toISOString() 
         : (isCompleted ? entry?.watchedDate : undefined)
-    } as Entry);
+    } as Entry;
+
+    // If marking as completed for the first time, add to history
+    if (isCompleted && !wasCompleted && (!finalEntry.watchHistory || finalEntry.watchHistory.length === 0)) {
+      finalEntry.watchHistory = [{
+        date: new Date().toISOString(),
+        rating: finalEntry.myRating,
+        notes: finalEntry.review
+      }];
+    }
+
+    onSave(finalEntry);
+  };
+
+  const openJustWatch = () => {
+    const query = encodeURIComponent(formData.title || '');
+    window.open(`https://www.justwatch.com/in/search?q=${query}`, '_blank');
   };
 
   return (
@@ -115,14 +186,24 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
           <div className="md:col-span-2 space-y-6">
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Title</label>
-              <input 
-                required
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="e.g. Interstellar"
-                className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold tracking-wide"
-              />
+              <div className="relative">
+                <input 
+                  required
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="e.g. Inception"
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold tracking-wide"
+                />
+                <button
+                  type="button"
+                  onClick={openJustWatch}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all group"
+                >
+                  <MapPin className="w-3 h-3 text-neon-blue" />
+                  <span className="text-[8px] font-black text-white uppercase tracking-widest">Find Where to Watch</span>
+                </button>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-6">
@@ -207,7 +288,7 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
             </select>
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Platform</label>
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Platform (India)</label>
             <select 
               name="platform"
               value={formData.platform}
@@ -219,34 +300,75 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
           </div>
         </div>
 
-        {/* Cast */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Lead Actor</label>
-            <input 
-              name="leadActor"
-              value={formData.leadActor}
-              onChange={handleChange}
-              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
-            />
+        {/* Nano Genres */}
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            Nano Genres <Star className="w-3 h-3 text-neon-purple" />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {NANO_GENRES.map(genre => (
+              <button
+                key={genre}
+                type="button"
+                onClick={() => toggleNanoGenre(genre)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                  formData.nanoGenres?.includes(genre)
+                    ? "bg-neon-purple/20 border-neon-purple text-neon-purple"
+                    : "bg-white/5 border-white/5 text-gray-500 hover:border-white/20"
+                )}
+              >
+                {genre}
+              </button>
+            ))}
           </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Lead Actress</label>
-            <input 
-              name="leadActress"
-              value={formData.leadActress}
-              onChange={handleChange}
-              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
-            />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            Tags & Keywords <Tag className="w-3 h-3 text-neon-blue" />
+          </label>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {formData.tags?.map(tag => (
+              <span 
+                key={tag}
+                className="px-3 py-1.5 bg-neon-blue/10 border border-neon-blue/20 text-neon-blue rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+              >
+                #{tag}
+                <button type="button" onClick={() => handleRemoveTag(tag)} className="hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
           </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Supporting Actor</label>
+          <div className="flex gap-3">
             <input 
-              name="supportingActor"
-              value={formData.supportingActor}
-              onChange={handleChange}
-              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag(newTag))}
+              placeholder="Add custom tag... (e.g. mindbending)"
+              className="flex-1 bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 transition-all font-bold"
             />
+            <button
+              type="button"
+              onClick={() => handleAddTag(newTag)}
+              className="px-6 bg-neon-blue/20 text-neon-blue rounded-2xl border border-neon-blue/30 hover:bg-neon-blue hover:text-white transition-all font-black uppercase tracking-widest text-[10px]"
+            >
+              Add
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {POPULAR_TAGS.filter(t => !formData.tags?.includes(t)).map(tag => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => handleAddTag(tag)}
+                className="px-3 py-1 text-[8px] font-black text-gray-500 uppercase tracking-widest hover:text-neon-blue transition-colors"
+              >
+                #{tag}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -269,15 +391,13 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
               My Rating <Star className="w-3 h-3 text-neon-yellow fill-neon-yellow" />
             </label>
-            <input 
-              type="number"
-              step="0.5"
-              max="10"
-              name="myRating"
-              value={formData.myRating ?? ''}
-              onChange={handleChange}
-              className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
-            />
+            <div className="h-[58px] flex items-center px-4 bg-black/40 border border-white/5 rounded-2xl">
+              <StarRating 
+                rating={formData.myRating || 0} 
+                interactive 
+                onChange={(r) => setFormData(prev => ({ ...prev, myRating: r }))} 
+              />
+            </div>
           </div>
           <div className="md:col-span-2 space-y-3">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Status</label>
@@ -300,6 +420,50 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
             </div>
           </div>
         </div>
+
+        {/* Rewatch Tracking */}
+        {formData.status === 'Completed' && (
+          <div className="space-y-6 bg-zinc-900/30 p-10 rounded-[2rem] border border-white/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <History className="w-5 h-5 text-neon-green" />
+                <h3 className="text-xl font-black text-white uppercase tracking-tight font-display">Watch History</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddWatchSession}
+                className="px-6 py-3 bg-neon-green/10 text-neon-green border border-neon-green/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neon-green hover:text-white transition-all"
+              >
+                Log Rewatch
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {formData.watchHistory?.map((session, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-6">
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      {new Date(session.date).toLocaleDateString()}
+                    </div>
+                    <StarRating rating={session.rating} size={14} />
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveWatchSession(index)}
+                    className="p-2 text-gray-600 hover:text-neon-red transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {(!formData.watchHistory || formData.watchHistory.length === 0) && (
+                <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest text-center py-4 italic">
+                  No rewatches logged yet
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Series Specific */}
         {(formData.type === 'Web Series' || formData.type === 'Sitcom' || formData.type === 'Anime') && (

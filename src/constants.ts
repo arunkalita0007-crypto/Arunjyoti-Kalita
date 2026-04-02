@@ -15,9 +15,63 @@ export const TYPE_OPTIONS: EntertainmentType[] = [
 ];
 
 export const STATUS_OPTIONS = ['Watching', 'Completed', 'Dropped', 'Want to Watch'] as const;
-export const PLATFORM_OPTIONS = ['Netflix', 'Prime', 'Disney+', 'HBO', 'Theatre', 'YouTube', 'Other'] as const;
+export const PLATFORM_OPTIONS = [
+  'Netflix', 
+  'Prime', 
+  'Disney+', 
+  'Hotstar', 
+  'Apple TV+', 
+  'ZEE5', 
+  'JioCinema', 
+  'YouTube', 
+  'HBO', 
+  'Theatre', 
+  'Other'
+] as const;
 export const MOOD_OPTIONS = ['Evening', 'Daytime', 'Weekend', 'Anytime'] as const;
 export const BASED_ON_OPTIONS = ['Original', 'Book', 'True Story', 'Comic', 'Game'] as const;
+
+export const NANO_GENRES = [
+  'Existential road trip',
+  'Unreliable narrator',
+  'Found footage horror',
+  'Slow burn thriller',
+  'Feel good tearjerker',
+  'Neo-noir detective',
+  'Coming-of-age indie',
+  'Satirical black comedy',
+  'Dystopian cyberpunk',
+  'Surrealist dreamscape',
+  'Period piece drama',
+  'High-stakes heist',
+  'Space opera epic',
+  'Gothic romance',
+  'Mockumentary style'
+];
+
+export const POPULAR_TAGS = [
+  'mindbending',
+  'mustwatch',
+  'overrated',
+  'masterpiece',
+  'rewatched',
+  'underrated',
+  'cinematography',
+  'soundtrack',
+  'acting',
+  'plot-twist',
+  'mindbending',
+  'mustwatch',
+  'comfort-movie',
+  'rainy-day',
+  'family-watch',
+  'visual-masterpiece',
+  'slow-burn',
+  'feel-good',
+  'dark-and-gritty',
+  'whimsical',
+  'nostalgic'
+];
 
 export const GENRES = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Mystery', 

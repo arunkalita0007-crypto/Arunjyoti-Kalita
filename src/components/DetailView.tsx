@@ -12,19 +12,28 @@ import {
   Heart,
   Share2,
   Edit3,
+  Bookmark,
+  History,
+  Tag,
+  Search,
+  Plus,
+  Check
 } from 'lucide-react';
-import { Entry } from '../types';
+import { Entry, CustomList } from '../types';
+import { StarRating } from './StarRating';
 import { TYPE_COLORS, NEON_GLOWS } from '../constants';
 import { cn } from '../lib/utils';
 
 interface DetailViewProps {
   entry: Entry;
+  lists: CustomList[];
   onClose: () => void;
   onEdit: () => void;
   onUpdateReview?: (id: string, review: string) => void;
+  onToggleList: (listId: string, entryId: string) => void;
 }
 
-export function DetailView({ entry, onClose, onEdit, onUpdateReview }: DetailViewProps) {
+export function DetailView({ entry, lists, onClose, onEdit, onUpdateReview, onToggleList }: DetailViewProps) {
   const neonColor = TYPE_COLORS[entry.type as keyof typeof TYPE_COLORS] || 'var(--color-neon-blue)';
   const neonGlow = NEON_GLOWS[entry.type as keyof typeof NEON_GLOWS] || 'neon-glow-blue';
 
@@ -62,18 +71,21 @@ export function DetailView({ entry, onClose, onEdit, onUpdateReview }: DetailVie
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
           
-          <div className="absolute bottom-8 left-8 right-8 flex justify-between items-center">
-            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
-              <Star className="w-4 h-4 text-neon-yellow fill-neon-yellow" />
-              <span className="text-xl font-black text-white">{entry.myRating || entry.imdbRating}</span>
+            <div className="absolute bottom-8 left-8 right-8 flex justify-between items-center gap-4">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+                <StarRating rating={entry.myRating} size={16} />
+                <span className="text-xl font-black text-white ml-2">{entry.myRating}/5</span>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={onEdit}
+                  className="p-4 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
+                  title="Edit Entry"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={onEdit}
-              className="p-4 bg-white text-black rounded-2xl hover:scale-110 transition-transform shadow-xl"
-            >
-              <Edit3 className="w-5 h-5" />
-            </button>
-          </div>
         </div>
 
         {/* Content Section */}
@@ -137,13 +149,83 @@ export function DetailView({ entry, onClose, onEdit, onUpdateReview }: DetailVie
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Review</p>
-              </div>
-              <div className="bg-white/5 p-6 rounded-3xl border border-white/5 relative">
-                <p className="text-gray-300 leading-relaxed italic">"{entry.review || 'No review written yet...'}"</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Add to Custom Lists</p>
+              <div className="flex flex-wrap gap-3">
+                {lists.map(list => {
+                  const isInList = list.entryIds.includes(entry.id);
+                  return (
+                    <button
+                      key={list.id}
+                      onClick={() => onToggleList(list.id, entry.id)}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                        isInList 
+                          ? "bg-white text-black border-white" 
+                          : "bg-white/5 text-gray-400 border-white/5 hover:border-white/20"
+                      )}
+                    >
+                      {isInList ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                      {list.name}
+                    </button>
+                  );
+                })}
+                {lists.length === 0 && (
+                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic">No custom lists created yet</p>
+                )}
               </div>
             </div>
+
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Where to Watch (India)</p>
+              <div className="flex flex-wrap gap-4">
+                {['Netflix', 'Prime Video', 'Disney+ Hotstar', 'Apple TV+', 'ZEE5', 'JioCinema'].map(platform => (
+                  <div key={platform} className="flex items-center gap-2 bg-zinc-900/50 px-4 py-3 rounded-2xl border border-white/5">
+                    <div className="w-2 h-2 rounded-full bg-neon-blue shadow-[0_0_10px_rgba(0,242,255,0.5)]" />
+                    <span className="text-xs font-bold text-white">{platform}</span>
+                  </div>
+                ))}
+              </div>
+              <a 
+                href={`https://www.justwatch.com/in/search?q=${encodeURIComponent(entry.title)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-neon-blue/10 text-neon-blue border border-neon-blue/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neon-blue hover:text-white transition-all"
+              >
+                <Search className="w-4 h-4" />
+                Find on JustWatch
+              </a>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Tags & Keywords</p>
+              <div className="flex flex-wrap gap-2">
+                {entry.tags?.map(tag => (
+                  <span key={tag} className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    #{tag}
+                  </span>
+                ))}
+                {(!entry.tags || entry.tags.length === 0) && (
+                  <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic">No tags added</p>
+                )}
+              </div>
+            </div>
+
+            {entry.watchHistory && entry.watchHistory.length > 0 && (
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Watch History (Rewatches)</p>
+                <div className="space-y-2">
+                  {entry.watchHistory.map((session, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="flex items-center gap-4">
+                        <History className="w-4 h-4 text-neon-green" />
+                        <span className="text-xs font-bold text-white">{new Date(session.date).toLocaleDateString()}</span>
+                      </div>
+                      <StarRating rating={session.rating} size={12} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {entry.awardsWon && (
               <div className="flex items-center gap-4 bg-neon-yellow/10 border border-neon-yellow/20 p-6 rounded-3xl">
