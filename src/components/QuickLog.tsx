@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X, Star, Film, Tv } from 'lucide-react';
 import { Entry, EntertainmentType } from '../types';
 import { cn } from '../lib/utils';
+import { POPULAR_COUNTRIES } from '../constants';
 
 interface QuickLogProps {
   onSave: (entry: Entry) => void;
@@ -12,6 +13,10 @@ export function QuickLog({ onSave }: QuickLogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState<EntertainmentType>('Movie');
+  const [leadActor, setLeadActor] = useState('');
+  const [leadActress, setLeadActress] = useState('');
+  const [country, setCountry] = useState('');
+  const [posterUrl, setPosterUrl] = useState('');
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
 
@@ -26,11 +31,11 @@ export function QuickLog({ onSave }: QuickLogProps) {
       year: new Date().getFullYear(),
       director: 'Unknown',
       genre: 'Unknown',
-      leadActor: 'Unknown',
-      leadActress: 'Unknown',
+      leadActor: leadActor || 'Unknown',
+      leadActress: leadActress || 'Unknown',
       supportingActor: 'Unknown',
       platform: 'Other',
-      country: 'Unknown',
+      country: country || 'Unknown',
       language: 'Unknown',
       runtime: 0,
       episodesWatched: 0,
@@ -42,12 +47,16 @@ export function QuickLog({ onSave }: QuickLogProps) {
       mood: 'Anytime',
       basedOn: 'Original',
       review,
-      posterUrl: `https://picsum.photos/seed/${title}/400/600`,
+      posterUrl: posterUrl || `https://picsum.photos/seed/${title}/400/600`,
       addedAt: new Date().toISOString(),
     };
 
     onSave(newEntry);
     setTitle('');
+    setLeadActor('');
+    setLeadActress('');
+    setCountry('');
+    setPosterUrl('');
     setRating(0);
     setReview('');
     setIsOpen(false);
@@ -101,6 +110,44 @@ export function QuickLog({ onSave }: QuickLogProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Lead Actor</label>
+                    <input
+                      type="text"
+                      value={leadActor}
+                      onChange={(e) => setLeadActor(e.target.value)}
+                      placeholder="Actor"
+                      className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Lead Actress</label>
+                    <input
+                      type="text"
+                      value={leadActress}
+                      onChange={(e) => setLeadActress(e.target.value)}
+                      placeholder="Actress"
+                      className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Country</label>
+                  <input
+                    list="quick-popular-countries"
+                    type="text"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="e.g. South Korea"
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                  />
+                  <datalist id="quick-popular-countries">
+                    {POPULAR_COUNTRIES.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setType('Movie')}
@@ -140,6 +187,17 @@ export function QuickLog({ onSave }: QuickLogProps) {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Poster URL (Optional)</label>
+                  <input
+                    type="text"
+                    value={posterUrl}
+                    onChange={(e) => setPosterUrl(e.target.value)}
+                    placeholder="Paste image link..."
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                  />
                 </div>
 
                 <div className="space-y-2">

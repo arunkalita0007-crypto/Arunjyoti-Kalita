@@ -74,8 +74,8 @@ export const POPULAR_TAGS = [
 ];
 
 export const GENRES = [
-  'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Mystery', 
-  'Psychological', 'Romance', 'Sci-Fi', 'Thriller', 'Western', 'Crime', 
+  'Action', 'Adventure', 'Comedy', 'Crime', 'Crime Thriller', 'Drama', 'Fantasy', 'Horror', 'Mystery', 
+  'Psychological', 'Romance', 'Sci-Fi', 'Thriller', 'Western', 
   'Animation', 'Biography', 'History', 'Musical', 'War'
 ];
 
@@ -107,3 +107,26 @@ export const MOOD_MAPPINGS = [
   { label: 'Feel Good', emoji: '🥰', genres: ['Romance', 'Musical', 'Adventure'] },
   { label: 'Adrenaline', emoji: '⚡', genres: ['Action', 'Adventure', 'War'] },
 ];
+
+export const POPULAR_COUNTRIES = [
+  'India',
+  'USA',
+  'UK',
+  'South Korea',
+  'Japan',
+  'France',
+  'Spain',
+  'Brazil',
+  'Germany',
+  'Italy',
+  'Canada',
+  'Australia',
+  'China',
+  'Mexico',
+  'Iran',
+  'Turkey',
+  'Sweden',
+  'Denmark',
+  'Norway',
+  'Russia'
+].sort();

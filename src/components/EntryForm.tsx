@@ -22,7 +22,8 @@ import {
   BASED_ON_OPTIONS,
   GENRES,
   NANO_GENRES,
-  POPULAR_TAGS
+  POPULAR_TAGS,
+  POPULAR_COUNTRIES
 } from '../constants';
 import { cn } from '../lib/utils';
 import { StarRating } from './StarRating';
@@ -248,18 +249,20 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
                   </div>
                 </>
               ) : (
-                <>
-                  <ImageIcon className="w-10 h-10 text-zinc-800 mb-3" />
-                  <input 
-                    type="text"
-                    name="posterUrl"
-                    value={formData.posterUrl}
-                    onChange={handleChange}
-                    placeholder="Paste URL"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  <p className="text-[10px] font-black text-gray-600 text-center px-6 uppercase tracking-widest">Click to add poster</p>
-                </>
+                <div className="flex flex-col items-center justify-center p-6 space-y-4 w-full h-full">
+                  <ImageIcon className="w-10 h-10 text-zinc-800" />
+                  <div className="w-full px-6 space-y-2">
+                    <input 
+                      type="text"
+                      name="posterUrl"
+                      value={formData.posterUrl || ''}
+                      onChange={handleChange}
+                      placeholder="Paste Image URL"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:outline-none focus:border-neon-blue/50 transition-all text-center"
+                    />
+                    <p className="text-[8px] font-black text-gray-600 text-center uppercase tracking-widest">Enter a direct image link</p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -277,6 +280,24 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
             />
           </div>
           <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Lead Actor</label>
+            <input 
+              name="leadActor"
+              value={formData.leadActor}
+              onChange={handleChange}
+              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
+            />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Lead Actress</label>
+            <input 
+              name="leadActress"
+              value={formData.leadActress}
+              onChange={handleChange}
+              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
+            />
+          </div>
+          <div className="space-y-3">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Genre</label>
             <select 
               name="genre"
@@ -286,6 +307,30 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
             >
               {GENRES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Country</label>
+            <input 
+              list="popular-countries"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+              placeholder="e.g. South Korea"
+              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
+            />
+            <datalist id="popular-countries">
+              {POPULAR_COUNTRIES.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Language</label>
+            <input 
+              name="language"
+              value={formData.language}
+              onChange={handleChange}
+              placeholder="e.g. Korean"
+              className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-neon-blue/50 focus:bg-zinc-900 transition-all font-bold"
+            />
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Platform (India)</label>
