@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Globe, X, Film, Star, TrendingUp, Map as MapIcon, ChevronRight, Sparkles } from 'lucide-react';
-import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
+import * as d3 from 'd3-geo';
+import { feature } from 'topojson-client';
 import { Entry } from '../types';
 import { cn } from '../lib/utils';
 
@@ -15,6 +16,22 @@ interface WorldCinemaMapProps {
 export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [tooltipContent, setTooltipContent] = useState("");
+  const [geographies, setGeographies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(geoUrl)
+      .then(res => res.json())
+      .then(data => {
+        const countries = feature(data, data.objects.countries) as any;
+        setGeographies(countries.features);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load map data:", err);
+        setLoading(false);
+      });
+  }, []);
 
   const countryStats = useMemo(() => {
     const stats: Record<string, Entry[]> = {};
@@ -39,6 +56,16 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
     return "#3b82f6";
   };
 
+  const projection = useMemo(() => 
+    d3.geoEqualEarth()
+      .scale(150)
+      .translate([400, 230])
+  , []);
+
+  const pathGenerator = useMemo(() => 
+    d3.geoPath().projection(projection)
+  , [projection]);
+
   const countryEntries = selectedCountry ? countryStats[selectedCountry] || [] : [];
 
   return (
@@ -57,49 +84,40 @@ export function WorldCinemaMap({ entries, onSelect }: WorldCinemaMapProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
         {/* Map Section */}
-        <div className="lg:col-span-3 bg-zinc-900/30 border border-white/5 rounded-[3rem] p-8 md:p-12 relative overflow-hidden group min-h-[600px]">
+        <div className="lg:col-span-3 bg-zinc-900/30 border border-white/5 rounded-[3rem] p-8 md:p-12 relative overflow-hidden group min-h-[500px] flex items-center justify-center">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 blur-[100px] -translate-y-1/2 translate-x-1/2" />
           
-          <div className="relative z-10 w-full h-full">
-            <ComposableMap projectionConfig={{ scale: 200 }}>
-              <ZoomableGroup>
-                <Geographies geography={geoUrl}>
-                  {({ geographies }) =>
-                    geographies.map((geo) => {
-                      const countryName = geo.properties.name;
-                      const count = countryStats[countryName]?.length || 0;
-                      return (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          onMouseEnter={() => setTooltipContent(`${countryName}: ${count} watched`)}
-                          onMouseLeave={() => setTooltipContent("")}
-                          onClick={() => setSelectedCountry(countryName)}
-                          style={{
-                            default: {
-                              fill: getCountryColor(count),
-                              outline: "none",
-                              stroke: "#ffffff10",
-                              strokeWidth: 0.5,
-                              transition: "all 0.3s"
-                            },
-                            hover: {
-                              fill: "#3b82f6",
-                              outline: "none",
-                              cursor: "pointer"
-                            },
-                            pressed: {
-                              fill: "#2563eb",
-                              outline: "none"
-                            }
-                          }}
-                        />
-                      );
-                    })
-                  }
-                </Geographies>
-              </ZoomableGroup>
-            </ComposableMap>
+          <div className="relative z-10 w-full aspect-[8/5]">
+            {loading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <svg viewBox="0 0 800 450" className="w-full h-full">
+                <g>
+                  {geographies.map((geo, i) => {
+                    const countryName = geo.properties.name;
+                    const count = countryStats[countryName]?.length || 0;
+                    const d = pathGenerator(geo);
+                    if (!d) return null;
+
+                    return (
+                      <path
+                        key={geo.id || i}
+                        d={d}
+                        fill={getCountryColor(count)}
+                        stroke="#ffffff10"
+                        strokeWidth={0.5}
+                        className="transition-colors duration-300 cursor-pointer hover:fill-blue-500"
+                        onMouseEnter={() => setTooltipContent(`${countryName}: ${count} watched`)}
+                        onMouseLeave={() => setTooltipContent("")}
+                        onClick={() => setSelectedCountry(countryName)}
+                      />
+                    );
+                  })}
+                </g>
+              </svg>
+            )}
             
             {tooltipContent && (
               <div className="absolute bottom-8 left-8 px-4 py-2 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl text-[10px] font-black text-white uppercase tracking-widest">
