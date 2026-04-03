@@ -232,30 +232,39 @@ export function Dashboard({
       />
 
       {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-        {/* Sidebar Filters */}
-        <aside className="lg:col-span-1 space-y-12">
-          <div className="space-y-8 sticky top-32">
-            <div className="pb-8 border-b border-white/5">
-              <SurpriseMe entries={entries} onSelect={onSelect} />
-            </div>
+      <div className="space-y-12">
+        {/* Search Bar - Prominent */}
+        <div className="max-w-3xl mx-auto w-full">
+          <div className="relative group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-all duration-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by title, director, or lead actor..."
+              className="w-full bg-zinc-900/30 border border-white/5 rounded-[2rem] pl-16 pr-8 py-6 text-xl font-bold text-white focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/50 transition-all shadow-2xl backdrop-blur-xl"
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-6 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Search</h4>
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Title, actor, director..."
-                  className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold text-white focus:outline-none focus:border-blue-500/50 transition-all"
-                />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+          {/* Sidebar Filters */}
+          <aside className="lg:col-span-1 space-y-12">
+            <div className="space-y-8 sticky top-32">
+              <div className="pb-8 border-b border-white/5">
+                <SurpriseMe entries={entries} onSelect={onSelect} />
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Status</h4>
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Status</h4>
               <div className="flex flex-wrap gap-2">
                 {['All', ...STATUS_OPTIONS].map((status) => (
                   <button
@@ -467,8 +476,9 @@ export function Dashboard({
           )}
         </div>
       </div>
+    </div>
 
-          {/* Timeline Section */}
+    {/* Timeline Section */}
           <WatchTimeline entries={entries} onSelect={onSelect} />
 
           {/* Activity Feed */}
