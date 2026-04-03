@@ -82,6 +82,10 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('cinetrack_userid');
     setUserId(null);
+    setEntries(SAMPLE_DATA);
+    setGoals([]);
+    setCustomLists([]);
+    setActiveTab('dashboard');
   };
 
   // Handle global director click
@@ -452,6 +456,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <button
+              onClick={handleLogout}
+              className="hidden md:flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-red-500 transition-colors font-black uppercase tracking-widest text-[10px]"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
             <button
               onClick={() => {
                 setEditingEntry(null);
