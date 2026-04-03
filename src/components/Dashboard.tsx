@@ -179,47 +179,47 @@ export function Dashboard({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-24">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-16 sm:space-y-24 overflow-x-hidden">
       {/* Hero Section */}
-      <header className="relative py-24 flex flex-col items-center text-center space-y-8 overflow-hidden rounded-[4rem] bg-zinc-900/30 border border-white/5">
+      <header className="relative py-12 sm:py-24 flex flex-col items-center text-center space-y-8 overflow-hidden rounded-[2rem] sm:rounded-[4rem] bg-zinc-900/30 border border-white/5">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative z-10 space-y-4"
+          className="relative z-10 space-y-4 px-4"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-full">
             <Sparkles className="w-4 h-4 text-blue-500" />
-            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Premium Cinema Companion</span>
+            <span className="text-[8px] sm:text-[10px] font-black text-blue-500 uppercase tracking-widest">Premium Cinema Companion</span>
           </div>
-          <h1 className="text-7xl md:text-8xl font-black text-white uppercase tracking-tighter leading-[0.85] font-display">
+          <h1 className="text-4xl sm:text-7xl md:text-8xl font-black text-white uppercase tracking-tighter leading-[0.85] font-display">
             Your Cinema,<br />Your Rules.
           </h1>
-          <p className="text-xl font-bold text-gray-500 uppercase tracking-widest max-w-2xl mx-auto">
+          <p className="text-sm sm:text-xl font-bold text-gray-500 uppercase tracking-widest max-w-2xl mx-auto">
             Track, discover, and celebrate your cinematic journey with CineTrack.
           </p>
         </motion.div>
 
-        <div className="relative z-10 flex flex-wrap justify-center gap-6 pt-8">
-          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl flex items-center gap-4">
-            <Film className="w-6 h-6 text-blue-500" />
+        <div className="relative z-10 flex flex-wrap justify-center gap-4 sm:gap-6 pt-8 px-4">
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl sm:rounded-3xl flex items-center gap-4">
+            <Film className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
             <div className="text-left">
-              <p className="text-2xl font-black text-white leading-none">{entries.length}</p>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Titles</p>
+              <p className="text-xl sm:text-2xl font-black text-white leading-none">{entries.length}</p>
+              <p className="text-[8px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Titles</p>
             </div>
           </div>
-          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl flex items-center gap-4">
-            <CheckCircle className="w-6 h-6 text-green-500" />
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl sm:rounded-3xl flex items-center gap-4">
+            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
             <div className="text-left">
-              <p className="text-2xl font-black text-white leading-none">{entries.filter(e => e.status === 'Completed').length}</p>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Watched</p>
+              <p className="text-xl sm:text-2xl font-black text-white leading-none">{entries.filter(e => e.status === 'Completed').length}</p>
+              <p className="text-[8px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Watched</p>
             </div>
           </div>
-          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl flex items-center gap-4">
-            <Star className="w-6 h-6 text-yellow-500" />
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl sm:rounded-3xl flex items-center gap-4">
+            <Star className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
             <div className="text-left">
-              <p className="text-2xl font-black text-white leading-none">{avgRating}</p>
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Avg Rating</p>
+              <p className="text-xl sm:text-2xl font-black text-white leading-none">{avgRating}</p>
+              <p className="text-[8px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Avg Rating</p>
             </div>
           </div>
         </div>
@@ -234,15 +234,15 @@ export function Dashboard({
       {/* Main Content Area */}
       <div className="space-y-12">
         {/* Search Bar - Prominent */}
-        <div className="max-w-3xl mx-auto w-full">
+        <div className="max-w-3xl mx-auto w-full px-4">
           <div className="relative group">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 group-focus-within:text-blue-500 transition-all duration-500" />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-focus-within:text-blue-500 transition-all duration-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title, director, or lead actor..."
-              className="w-full bg-zinc-900/30 border border-white/5 rounded-[2rem] pl-16 pr-8 py-6 text-xl font-bold text-white focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/50 transition-all shadow-2xl backdrop-blur-xl"
+              placeholder="Search movies, actors, directors..."
+              className="w-full bg-zinc-900/30 border border-white/5 rounded-2xl sm:rounded-[2rem] pl-14 sm:pl-16 pr-8 py-4 sm:py-6 text-lg sm:text-xl font-bold text-white focus:outline-none focus:border-blue-500/50 focus:bg-zinc-900/50 transition-all shadow-2xl backdrop-blur-xl"
             />
             {search && (
               <button 

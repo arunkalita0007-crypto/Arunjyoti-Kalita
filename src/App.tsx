@@ -426,7 +426,7 @@ export default function App() {
             <span className="text-xl font-black text-white uppercase tracking-tighter font-display group-hover:text-blue-500 transition-colors">CineTrack</span>
           </div>
 
-          <div className="flex items-center gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5">
+          <div className="flex items-center gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar flex-1 sm:flex-none">
             {[
               { id: 'dashboard', icon: LayoutDashboard, label: 'Feed' },
               { id: 'watchlist', icon: Bookmark, label: 'Watchlist' },
@@ -443,25 +443,26 @@ export default function App() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500",
+                  "flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap",
                   activeTab === tab.id 
                     ? "bg-white text-black shadow-xl scale-105" 
                     : "text-gray-500 hover:text-white hover:bg-white/5"
                 )}
               >
                 <tab.icon className="w-4 h-4" />
-                <span className="hidden md:block">{tab.label}</span>
+                <span className="hidden sm:block">{tab.label}</span>
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
             <button
               onClick={handleLogout}
-              className="hidden md:flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-red-500 transition-colors font-black uppercase tracking-widest text-[10px]"
+              className="flex items-center gap-2 px-3 md:px-4 py-2 text-gray-500 hover:text-red-500 transition-colors font-black uppercase tracking-widest text-[10px]"
+              title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
-              Sign Out
+              <span className="hidden sm:block">Sign Out</span>
             </button>
             <button
               onClick={() => {
