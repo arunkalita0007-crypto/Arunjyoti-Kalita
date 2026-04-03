@@ -134,6 +134,7 @@ export const POPULAR_COUNTRIES = [
 export const COUNTRY_NAME_MAPPINGS: Record<string, string> = {
   'USA': 'United States of America',
   'UNITED STATES': 'United States of America',
+  'UNITED STATES OF AMERICA': 'United States of America',
   'US': 'United States of America',
   'UK': 'United Kingdom',
   'UNITED KINGDOM': 'United Kingdom',

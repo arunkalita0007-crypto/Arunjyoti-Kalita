@@ -94,6 +94,8 @@ export const CustomLists: React.FC<CustomListsProps> = ({
     setIsCreating(true);
   };
 
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const listEntries = selectedList 
     ? entries.filter(e => selectedList.entryIds.includes(e.id))
     : [];
@@ -339,18 +341,53 @@ export const CustomLists: React.FC<CustomListsProps> = ({
                 </button>
 
                 <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this list?')) {
-                      onDeleteList(selectedList.id);
-                      setSelectedListId(null);
-                    }
-                  }}
+                  onClick={() => setIsDeleting(selectedList.id)}
                   className="p-4 rounded-2xl bg-neon-red/10 text-neon-red hover:bg-neon-red hover:text-white transition-all border border-neon-red/20"
                 >
                   <Trash2 className="w-6 h-6" />
                 </button>
               </div>
             </header>
+
+            {/* Delete Confirmation Overlay */}
+            <AnimatePresence>
+              {isDeleting && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+                >
+                  <div className="bg-zinc-900 border border-white/10 p-12 rounded-[3rem] max-w-md w-full text-center space-y-8">
+                    <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500">
+                      <Trash2 className="w-10 h-10" />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-2xl font-black text-white uppercase tracking-tight">Delete List?</h4>
+                      <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">This action cannot be undone.</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => setIsDeleting(null)}
+                        className="flex-1 py-4 bg-zinc-800 text-white rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => {
+                          onDeleteList(isDeleting);
+                          setIsDeleting(null);
+                          setSelectedListId(null);
+                        }}
+                        className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px]"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
               {listEntries.length > 0 ? (

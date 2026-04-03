@@ -127,6 +127,17 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
     }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, posterUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const isCompleted = formData.status === 'Completed';
@@ -249,18 +260,40 @@ export function EntryForm({ entry, onSave, onDelete, onCancel }: EntryFormProps)
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center p-6 space-y-4 w-full h-full">
+                <div className="flex flex-col items-center justify-center p-6 space-y-4 w-full h-full relative">
                   <ImageIcon className="w-10 h-10 text-zinc-800" />
-                  <div className="w-full px-6 space-y-2">
-                    <input 
-                      type="text"
-                      name="posterUrl"
-                      value={formData.posterUrl || ''}
-                      onChange={handleChange}
-                      placeholder="Paste Image URL"
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:outline-none focus:border-neon-blue/50 transition-all text-center"
-                    />
-                    <p className="text-[8px] font-black text-gray-600 text-center uppercase tracking-widest">Enter a direct image link</p>
+                  <div className="w-full px-6 space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest text-center">Option 1: Paste URL</p>
+                      <input 
+                        type="text"
+                        name="posterUrl"
+                        value={formData.posterUrl || ''}
+                        onChange={handleChange}
+                        placeholder="Paste Image URL"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:outline-none focus:border-neon-blue/50 transition-all text-center"
+                      />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-white/5"></div>
+                      </div>
+                      <div className="relative flex justify-center text-[8px] uppercase tracking-widest font-black">
+                        <span className="bg-zinc-900 px-2 text-gray-700">OR</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest text-center">Option 2: Upload File</p>
+                      <label className="block w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-white uppercase tracking-widest text-center cursor-pointer hover:bg-white/10 transition-all">
+                        Choose Image
+                        <input 
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
