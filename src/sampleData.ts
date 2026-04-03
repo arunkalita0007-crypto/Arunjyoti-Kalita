@@ -1,4 +1,4 @@
-import { Entry } from './types';
+import type { Entry } from './types.ts';
 
 export const SAMPLE_DATA: Entry[] = [
   // MOVIES (30)

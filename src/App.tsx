@@ -21,18 +21,15 @@ import { DirectorProfile } from './components/DirectorProfile';
 import { WeeklyChallenge } from './components/WeeklyChallenge';
 import { CustomLists } from './components/CustomLists';
 import { AuthScreen } from './components/AuthScreen';
-import { auth, db } from './firebase';
 import { SAMPLE_DATA } from './sampleData';
-import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 
 type Tab = 'dashboard' | 'watchlist' | 'journal' | 'goals' | 'map' | 'evolution' | 'arena' | 'challenge' | 'profile' | 'lists';
 
 export default function App() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(localStorage.getItem('cinetrack_userid'));
+  const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>(SAMPLE_DATA);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
   const [showWrapped, setShowWrapped] = useState(false);
@@ -44,48 +41,48 @@ export default function App() {
   const [pendingListId, setPendingListId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
 
-  // Auth listener
+  // Fetch data from backend
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    if (!userId) return;
 
-  // Firestore listeners
-  useEffect(() => {
-    if (!user) {
-      setEntries([]);
-      setGoals([]);
-      setCustomLists([]);
-      return;
-    }
-
-    const qEntries = query(collection(db, 'entries'), where('userId', '==', user.uid));
-    const unsubEntries = onSnapshot(qEntries, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Entry));
-      setEntries(data.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()));
-    });
-
-    const qGoals = query(collection(db, 'goals'), where('userId', '==', user.uid));
-    const unsubGoals = onSnapshot(qGoals, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Goal));
-      setGoals(data);
-    });
-
-    const qLists = query(collection(db, 'lists'), where('userId', '==', user.uid));
-    const unsubLists = onSnapshot(qLists, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as CustomList));
-      setCustomLists(data);
-    });
-
-    return () => {
-      unsubEntries();
-      unsubGoals();
-      unsubLists();
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`/api/data/${userId}`);
+        const data = await response.json();
+        setEntries(data.entries || []);
+        setGoals(data.goals || []);
+        setCustomLists(data.lists || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
-  }, [user]);
+
+    fetchData();
+  }, [userId]);
+
+  // Save data to backend
+  const saveData = async (newEntries: Entry[], newGoals: Goal[], newLists: CustomList[]) => {
+    if (!userId) return;
+    try {
+      await fetch(`/api/data/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: newEntries, goals: newGoals, lists: newLists })
+      });
+    } catch (error) {
+      console.error("Error saving data:", error);
+    }
+  };
+
+  const handleLogin = (id: string) => {
+    localStorage.setItem('cinetrack_userid', id);
+    setUserId(id);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('cinetrack_userid');
+    setUserId(null);
+  };
 
   // Handle global director click
   useEffect(() => {
@@ -97,161 +94,124 @@ export default function App() {
   }, []);
 
   const handleAddEntry = async (newEntry: Entry) => {
-    if (!user) return;
-    try {
-      const { id, ...entryData } = newEntry;
-      const docRef = await addDoc(collection(db, 'entries'), {
-        ...entryData,
-        userId: user.uid
-      });
-      
-      if (pendingListId) {
-        handleToggleEntryInList(pendingListId, docRef.id);
-        setPendingListId(null);
-      }
-    } catch (error) {
-      console.error("Error adding entry:", error);
+    if (!userId) return;
+    const entryWithId = { ...newEntry, id: Math.random().toString(36).substr(2, 9) };
+    const newEntries = [entryWithId, ...entries];
+    setEntries(newEntries);
+    saveData(newEntries, goals, customLists);
+    
+    if (pendingListId) {
+      handleToggleEntryInList(pendingListId, entryWithId.id);
+      setPendingListId(null);
     }
   };
 
   const handleUpdateEntry = async (updatedEntry: Entry) => {
-    if (!user) return;
-    try {
-      const { id, ...entryData } = updatedEntry;
-      const docRef = doc(db, 'entries', id);
-      await updateDoc(docRef, { ...entryData });
-      
-      setIsFormOpen(false);
-      setEditingEntry(null);
+    if (!userId) return;
+    const newEntries = entries.map(e => e.id === updatedEntry.id ? updatedEntry : e);
+    setEntries(newEntries);
+    saveData(newEntries, goals, customLists);
+    
+    setIsFormOpen(false);
+    setEditingEntry(null);
 
-      const oldEntry = entries.find(e => e.id === id);
-      if (oldEntry?.status !== 'Completed' && updatedEntry.status === 'Completed') {
-        setJournalEntry(updatedEntry);
-      }
-    } catch (error) {
-      console.error("Error updating entry:", error);
+    const oldEntry = entries.find(e => e.id === updatedEntry.id);
+    if (oldEntry?.status !== 'Completed' && updatedEntry.status === 'Completed') {
+      setJournalEntry(updatedEntry);
     }
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'entries', id));
-      setIsFormOpen(false);
-      setEditingEntry(null);
-    } catch (error) {
-      console.error("Error deleting entry:", error);
-    }
+    if (!userId) return;
+    const newEntries = entries.filter(e => e.id !== id);
+    setEntries(newEntries);
+    saveData(newEntries, goals, customLists);
+    setIsFormOpen(false);
+    setEditingEntry(null);
   };
 
   const handleAddGoal = async (goal: Goal) => {
-    if (!user) return;
-    try {
-      const { id, ...goalData } = goal;
-      if (id && goals.some(g => g.id === id)) {
-        await updateDoc(doc(db, 'goals', id), { ...goalData });
-      } else {
-        await addDoc(collection(db, 'goals'), {
-          ...goalData,
-          userId: user.uid
-        });
-      }
-    } catch (error) {
-      console.error("Error adding/updating goal:", error);
+    if (!userId) return;
+    let newGoals;
+    if (goal.id && goals.some(g => g.id === goal.id)) {
+      newGoals = goals.map(g => g.id === goal.id ? goal : g);
+    } else {
+      newGoals = [...goals, { ...goal, id: Math.random().toString(36).substr(2, 9) }];
     }
+    setGoals(newGoals);
+    saveData(entries, newGoals, customLists);
   };
 
   const handleDeleteGoal = async (id: string) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'goals', id));
-    } catch (error) {
-      console.error("Error deleting goal:", error);
-    }
+    if (!userId) return;
+    const newGoals = goals.filter(g => g.id !== id);
+    setGoals(newGoals);
+    saveData(entries, newGoals, customLists);
   };
 
   const handleBulkUpdate = async (ids: string[], status: Entry['status']) => {
-    if (!user) return;
-    try {
-      const batch = writeBatch(db);
-      ids.forEach(id => {
-        const docRef = doc(db, 'entries', id);
-        batch.update(docRef, { 
-          status, 
-          watchedDate: status === 'Completed' ? new Date().toISOString() : entries.find(e => e.id === id)?.watchedDate 
-        });
-      });
-      await batch.commit();
-
-      const newlyCompleted = entries.find(e => ids.includes(e.id) && status === 'Completed');
-      if (newlyCompleted) {
-        setJournalEntry({ ...newlyCompleted, status, watchedDate: new Date().toISOString() });
+    if (!userId) return;
+    const newEntries = entries.map(e => {
+      if (ids.includes(e.id)) {
+        return {
+          ...e,
+          status,
+          watchedDate: status === 'Completed' ? new Date().toISOString() : e.watchedDate
+        };
       }
-    } catch (error) {
-      console.error("Error bulk updating:", error);
+      return e;
+    });
+    setEntries(newEntries);
+    saveData(newEntries, goals, customLists);
+
+    const newlyCompleted = entries.find(e => ids.includes(e.id) && status === 'Completed');
+    if (newlyCompleted) {
+      setJournalEntry({ ...newlyCompleted, status, watchedDate: new Date().toISOString() });
     }
   };
 
   const handleBulkDelete = async (ids: string[]) => {
-    if (!user) return;
-    try {
-      const batch = writeBatch(db);
-      ids.forEach(id => {
-        batch.delete(doc(db, 'entries', id));
-      });
-      await batch.commit();
-    } catch (error) {
-      console.error("Error bulk deleting:", error);
-    }
+    if (!userId) return;
+    const newEntries = entries.filter(e => !ids.includes(e.id));
+    setEntries(newEntries);
+    saveData(newEntries, goals, customLists);
   };
 
   const handleAddList = async (list: CustomList) => {
-    if (!user) return;
-    try {
-      const { id, ...listData } = list;
-      await addDoc(collection(db, 'lists'), {
-        ...listData,
-        userId: user.uid
-      });
-    } catch (error) {
-      console.error("Error adding list:", error);
-    }
+    if (!userId) return;
+    const newList = { ...list, id: Math.random().toString(36).substr(2, 9) };
+    const newLists = [...customLists, newList];
+    setCustomLists(newLists);
+    saveData(entries, goals, newLists);
   };
 
   const handleDeleteList = async (id: string) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'lists', id));
-    } catch (error) {
-      console.error("Error deleting list:", error);
-    }
+    if (!userId) return;
+    const newLists = customLists.filter(l => l.id !== id);
+    setCustomLists(newLists);
+    saveData(entries, goals, newLists);
   };
 
   const handleUpdateList = async (updatedList: CustomList) => {
-    if (!user) return;
-    try {
-      const { id, ...listData } = updatedList;
-      await updateDoc(doc(db, 'lists', id), { ...listData });
-    } catch (error) {
-      console.error("Error updating list:", error);
-    }
+    if (!userId) return;
+    const newLists = customLists.map(l => l.id === updatedList.id ? updatedList : l);
+    setCustomLists(newLists);
+    saveData(entries, goals, newLists);
   };
 
   const handleToggleEntryInList = async (listId: string, entryId: string) => {
-    if (!user) return;
-    try {
-      const list = customLists.find(l => l.id === listId);
-      if (!list) return;
+    if (!userId) return;
+    const list = customLists.find(l => l.id === listId);
+    if (!list) return;
 
-      const isInList = list.entryIds.includes(entryId);
-      const newEntryIds = isInList 
-        ? list.entryIds.filter(id => id !== entryId)
-        : [...list.entryIds, entryId];
+    const isInList = list.entryIds.includes(entryId);
+    const newEntryIds = isInList 
+      ? list.entryIds.filter(id => id !== entryId)
+      : [...list.entryIds, entryId];
 
-      await updateDoc(doc(db, 'lists', listId), { entryIds: newEntryIds });
-    } catch (error) {
-      console.error("Error toggling entry in list:", error);
-    }
+    const newLists = customLists.map(l => l.id === listId ? { ...l, entryIds: newEntryIds } : l);
+    setCustomLists(newLists);
+    saveData(entries, goals, newLists);
   };
 
   const handleEditEntry = (entry: Entry) => {
@@ -268,67 +228,22 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <AuthScreen />;
+  if (!userId) {
+    return <AuthScreen onLogin={handleLogin} />;
   }
 
-  const handleMigrateData = async () => {
-    const localEntries = localStorage.getItem('cinetrack_entries');
-    const localGoals = localStorage.getItem('cinetrack_goals');
-    const localLists = localStorage.getItem('cinetrack_lists');
-
-    if (localEntries) {
-      const entries = JSON.parse(localEntries) as Entry[];
-      const batch = writeBatch(db);
-      entries.forEach(entry => {
-        const { id, ...data } = entry;
-        const docRef = doc(collection(db, 'entries'));
-        batch.set(docRef, { ...data, userId: user.uid });
-      });
-      await batch.commit();
-      localStorage.removeItem('cinetrack_entries');
-    }
-
-    if (localGoals) {
-      const goals = JSON.parse(localGoals) as Goal[];
-      const batch = writeBatch(db);
-      goals.forEach(goal => {
-        const { id, ...data } = goal;
-        const docRef = doc(collection(db, 'goals'));
-        batch.set(docRef, { ...data, userId: user.uid });
-      });
-      await batch.commit();
-      localStorage.removeItem('cinetrack_goals');
-    }
-
-    if (localLists) {
-      const lists = JSON.parse(localLists) as CustomList[];
-      const batch = writeBatch(db);
-      lists.forEach(list => {
-        const { id, ...data } = list;
-        const docRef = doc(collection(db, 'lists'));
-        batch.set(docRef, { ...data, userId: user.uid });
-      });
-      await batch.commit();
-      localStorage.removeItem('cinetrack_lists');
-    }
-  };
-
   const handleSeedData = async () => {
-    if (!user || isSeeding) return;
+    if (!userId || isSeeding) return;
     setIsSeeding(true);
     try {
-      const batch = writeBatch(db);
-      SAMPLE_DATA.forEach(entry => {
-        const { id, ...data } = entry;
-        const docRef = doc(collection(db, 'entries'));
-        batch.set(docRef, { 
-          ...data, 
-          userId: user.uid,
-          addedAt: new Date().toISOString() 
-        });
-      });
-      await batch.commit();
+      const seededEntries = SAMPLE_DATA.map(entry => ({
+        ...entry,
+        id: Math.random().toString(36).substr(2, 9),
+        addedAt: new Date().toISOString()
+      }));
+      const newEntries = [...seededEntries, ...entries];
+      setEntries(newEntries);
+      saveData(newEntries, goals, customLists);
     } catch (error) {
       console.error("Error seeding data:", error);
     } finally {
@@ -389,8 +304,8 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-5xl font-black text-white uppercase tracking-tighter font-display leading-none">{user.displayName || 'Cinephile'}</h2>
-                  <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.3em]">Member since {new Date(user.metadata.creationTime || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                  <h2 className="text-5xl font-black text-white uppercase tracking-tighter font-display leading-none">{userId}</h2>
+                  <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.3em]">Logged in as {userId}</p>
                   <div className="flex gap-4 pt-4">
                     <button 
                       onClick={() => setShowWrapped(true)}
@@ -400,21 +315,12 @@ export default function App() {
                       View Wrapped
                     </button>
                     <button 
-                      onClick={() => signOut(auth)}
+                      onClick={handleLogout}
                       className="px-6 py-3 bg-zinc-800 text-white border border-white/5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-zinc-700 transition-all"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
-                    {(localStorage.getItem('cinetrack_entries') || localStorage.getItem('cinetrack_goals') || localStorage.getItem('cinetrack_lists')) && (
-                      <button 
-                        onClick={handleMigrateData}
-                        className="px-6 py-3 bg-blue-500/20 text-blue-500 border border-blue-500/30 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-blue-500 hover:text-white transition-all"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        Migrate Local Data
-                      </button>
-                    )}
                     {entries.length === 0 && (
                       <button 
                         onClick={handleSeedData}
