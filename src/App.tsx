@@ -40,6 +40,7 @@ export default function App() {
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const [pendingListId, setPendingListId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch data from backend
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function App() {
       setEntries(SAMPLE_DATA);
       setGoals([]);
       setCustomLists([]);
+      setAuthLoading(false);
       return;
     }
 
@@ -56,9 +58,12 @@ export default function App() {
         const response = await fetch(`/api/data/${userId}`);
         if (response.ok) {
           const data = await response.json();
-          setEntries(data.entries || SAMPLE_DATA);
-          setGoals(data.goals || []);
-          setCustomLists(data.lists || []);
+          // Ensure we have data before setting
+          if (data && data.entries) {
+            setEntries(data.entries);
+            setGoals(data.goals || []);
+            setCustomLists(data.lists || []);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -72,7 +77,8 @@ export default function App() {
 
   // Save data to backend
   const saveData = async (newEntries: Entry[], newGoals: Goal[], newLists: CustomList[]) => {
-    if (!userId) return;
+    if (!userId || authLoading) return;
+    setIsSyncing(true);
     try {
       await fetch(`/api/data/${userId}`, {
         method: 'POST',
@@ -81,6 +87,9 @@ export default function App() {
       });
     } catch (error) {
       console.error("Error saving data:", error);
+    } finally {
+      // Small delay for visual feedback
+      setTimeout(() => setIsSyncing(false), 500);
     }
   };
 
@@ -89,9 +98,9 @@ export default function App() {
     setUserId(id);
   };
 
-  const handleLogout = () => {
-    // Final save attempt before logout
-    saveData(entries, goals, customLists);
+  const handleLogout = async () => {
+    // Final save attempt before logout - wait for it
+    await saveData(entries, goals, customLists);
     localStorage.removeItem('cinetrack_userid');
     setUserId(null);
     setEntries(SAMPLE_DATA);
@@ -487,6 +496,13 @@ export default function App() {
             <span className="hidden lg:block">Sign Out</span>
           </button>
         </div>
+
+        {isSyncing && (
+          <div className="px-6 py-4 flex items-center gap-2 text-blue-500 animate-pulse">
+            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+            <span className="text-[8px] font-black uppercase tracking-widest">Syncing...</span>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}

@@ -32,17 +32,18 @@ async function startServer() {
   app.get("/api/data/:userId", (req, res) => {
     const { userId } = req.params;
     const db = readDB();
-    let userData = db.users[userId];
     
-    // If user doesn't exist OR has no entries, provide SAMPLE_DATA
-    if (!userData || !userData.entries || userData.entries.length === 0) {
-      userData = { 
+    // If user doesn't exist, initialize them with SAMPLE_DATA permanently
+    if (!db.users[userId]) {
+      db.users[userId] = { 
         entries: SAMPLE_DATA, 
-        goals: userData?.goals || [], 
-        lists: userData?.lists || [] 
+        goals: [], 
+        lists: [] 
       };
+      writeDB(db);
     }
-    res.json(userData);
+    
+    res.json(db.users[userId]);
   });
 
   app.post("/api/data/:userId", (req, res) => {
