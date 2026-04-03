@@ -22,16 +22,29 @@ import { WeeklyChallenge } from './components/WeeklyChallenge';
 import { CustomLists } from './components/CustomLists';
 import { AuthScreen } from './components/AuthScreen';
 import { SAMPLE_DATA } from './sampleData';
+import { 
+  saveUserData, 
+  loadUserData, 
+  setUserSession, 
+  getUserSession, 
+  clearUserSession 
+} from './lib/userStorage';
 
 type Tab = 'dashboard' | 'watchlist' | 'journal' | 'goals' | 'map' | 'evolution' | 'arena' | 'challenge' | 'profile' | 'lists';
 
 export default function App() {
-  const [userId, setUserId] = useState<string | null>(localStorage.getItem('cinetrack_userid'));
-  const [authLoading, setAuthLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(getUserSession());
+  const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [entries, setEntries] = useState<Entry[]>(SAMPLE_DATA);
+  
+  // Persistent States
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
+  const [challengeStart, setChallengeStart] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState({ mood: 'cinematic', volume: 0.5 });
+  const [dailyPick, setDailyPick] = useState<{ id: string; date: string } | null>(null);
+  
   const [showWrapped, setShowWrapped] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
@@ -42,70 +55,59 @@ export default function App() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Fetch data from backend
+  // Load data on login or refresh
   useEffect(() => {
     if (!userId) {
       setEntries(SAMPLE_DATA);
       setGoals([]);
       setCustomLists([]);
+      setChallengeStart(null);
+      setPreferences({ mood: 'cinematic', volume: 0.5 });
       setAuthLoading(false);
       return;
     }
 
-    const fetchData = async () => {
+    const loadAllData = () => {
       setAuthLoading(true);
-      try {
-        const response = await fetch(`/api/data/${userId}`);
-        if (response.ok) {
-          const data = await response.json();
-          // Ensure we have data before setting
-          if (data && data.entries) {
-            setEntries(data.entries);
-            setGoals(data.goals || []);
-            setCustomLists(data.lists || []);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setAuthLoading(false);
-      }
+      // Load each data type separately as requested
+      const savedEntries = loadUserData(userId, 'entries', SAMPLE_DATA);
+      const savedGoals = loadUserData(userId, 'goals', []);
+      const savedLists = loadUserData(userId, 'lists', []);
+      const savedChallenge = loadUserData(userId, 'challenge', null);
+      const savedPrefs = loadUserData(userId, 'preferences', { mood: 'cinematic', volume: 0.5 });
+      const savedDailyPick = loadUserData(userId, 'dailyPick', null);
+
+      setEntries(savedEntries);
+      setGoals(savedGoals);
+      setCustomLists(savedLists);
+      setChallengeStart(savedChallenge);
+      setPreferences(savedPrefs);
+      setDailyPick(savedDailyPick);
+      setAuthLoading(false);
     };
 
-    fetchData();
+    loadAllData();
   }, [userId]);
 
-  // Save data to backend
-  const saveData = async (newEntries: Entry[], newGoals: Goal[], newLists: CustomList[]) => {
-    if (!userId || authLoading) return;
+  // Save data instantly on every change
+  const persistData = (type: string, data: any) => {
+    if (!userId) return;
     setIsSyncing(true);
-    try {
-      await fetch(`/api/data/${userId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entries: newEntries, goals: newGoals, lists: newLists })
-      });
-    } catch (error) {
-      console.error("Error saving data:", error);
-    } finally {
-      // Small delay for visual feedback
-      setTimeout(() => setIsSyncing(false), 500);
-    }
+    saveUserData(userId, type, data);
+    
+    // Also sync to backend if it exists (optional but good for hybrid)
+    // For now, focusing on the requested localStorage fix
+    setTimeout(() => setIsSyncing(false), 300);
   };
 
   const handleLogin = (id: string) => {
-    localStorage.setItem('cinetrack_userid', id);
+    setUserSession(id);
     setUserId(id);
   };
 
-  const handleLogout = async () => {
-    // Final save attempt before logout - wait for it
-    await saveData(entries, goals, customLists);
-    localStorage.removeItem('cinetrack_userid');
+  const handleLogout = () => {
+    clearUserSession();
     setUserId(null);
-    setEntries(SAMPLE_DATA);
-    setGoals([]);
-    setCustomLists([]);
     setActiveTab('dashboard');
   };
 
@@ -123,7 +125,7 @@ export default function App() {
     const entryWithId = { ...newEntry, id: Math.random().toString(36).substr(2, 9) };
     const newEntries = [entryWithId, ...entries];
     setEntries(newEntries);
-    saveData(newEntries, goals, customLists);
+    persistData('entries', newEntries);
     
     if (pendingListId) {
       handleToggleEntryInList(pendingListId, entryWithId.id);
@@ -135,7 +137,7 @@ export default function App() {
     if (!userId) return;
     const newEntries = entries.map(e => e.id === updatedEntry.id ? updatedEntry : e);
     setEntries(newEntries);
-    saveData(newEntries, goals, customLists);
+    persistData('entries', newEntries);
     
     setIsFormOpen(false);
     setEditingEntry(null);
@@ -150,7 +152,7 @@ export default function App() {
     if (!userId) return;
     const newEntries = entries.filter(e => e.id !== id);
     setEntries(newEntries);
-    saveData(newEntries, goals, customLists);
+    persistData('entries', newEntries);
     setIsFormOpen(false);
     setEditingEntry(null);
   };
@@ -164,14 +166,14 @@ export default function App() {
       newGoals = [...goals, { ...goal, id: Math.random().toString(36).substr(2, 9) }];
     }
     setGoals(newGoals);
-    saveData(entries, newGoals, customLists);
+    persistData('goals', newGoals);
   };
 
   const handleDeleteGoal = async (id: string) => {
     if (!userId) return;
     const newGoals = goals.filter(g => g.id !== id);
     setGoals(newGoals);
-    saveData(entries, newGoals, customLists);
+    persistData('goals', newGoals);
   };
 
   const handleBulkUpdate = async (ids: string[], status: Entry['status']) => {
@@ -187,7 +189,7 @@ export default function App() {
       return e;
     });
     setEntries(newEntries);
-    saveData(newEntries, goals, customLists);
+    persistData('entries', newEntries);
 
     const newlyCompleted = entries.find(e => ids.includes(e.id) && status === 'Completed');
     if (newlyCompleted) {
@@ -199,29 +201,58 @@ export default function App() {
     if (!userId) return;
     const newEntries = entries.filter(e => !ids.includes(e.id));
     setEntries(newEntries);
-    saveData(newEntries, goals, customLists);
+    persistData('entries', newEntries);
   };
 
-  const handleAddList = async (list: CustomList) => {
+  const handleCreateList = async (list: Partial<CustomList>) => {
     if (!userId) return;
-    const newList = { ...list, id: Math.random().toString(36).substr(2, 9) };
+    const newList: CustomList = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: list.name || 'New List',
+      description: list.description || '',
+      entryIds: list.entryIds || [],
+      createdAt: new Date().toISOString(),
+      color: list.color || '#3b82f6'
+    };
     const newLists = [...customLists, newList];
     setCustomLists(newLists);
-    saveData(entries, goals, newLists);
+    persistData('lists', newLists);
   };
 
   const handleDeleteList = async (id: string) => {
     if (!userId) return;
     const newLists = customLists.filter(l => l.id !== id);
     setCustomLists(newLists);
-    saveData(entries, goals, newLists);
+    persistData('lists', newLists);
+  };
+
+  const handleStartChallenge = () => {
+    const today = new Date().toISOString();
+    setChallengeStart(today);
+    persistData('challenge', today);
+  };
+
+  const handleResetChallenge = () => {
+    setChallengeStart(null);
+    persistData('challenge', null);
+  };
+
+  const handleUpdatePreferences = (newPrefs: any) => {
+    const updated = { ...preferences, ...newPrefs };
+    setPreferences(updated);
+    persistData('preferences', updated);
+  };
+
+  const handleUpdateDailyPick = (pick: { id: string; date: string } | null) => {
+    setDailyPick(pick);
+    persistData('dailyPick', pick);
   };
 
   const handleUpdateList = async (updatedList: CustomList) => {
     if (!userId) return;
     const newLists = customLists.map(l => l.id === updatedList.id ? updatedList : l);
     setCustomLists(newLists);
-    saveData(entries, goals, newLists);
+    persistData('lists', newLists);
   };
 
   const handleToggleEntryInList = async (listId: string, entryId: string) => {
@@ -236,7 +267,7 @@ export default function App() {
 
     const newLists = customLists.map(l => l.id === listId ? { ...l, entryIds: newEntryIds } : l);
     setCustomLists(newLists);
-    saveData(entries, goals, newLists);
+    persistData('lists', newLists);
   };
 
   const handleEditEntry = (entry: Entry) => {
@@ -268,7 +299,7 @@ export default function App() {
       }));
       const newEntries = [...seededEntries, ...entries];
       setEntries(newEntries);
-      saveData(newEntries, goals, customLists);
+      persistData('entries', newEntries);
     } catch (error) {
       console.error("Error seeding data:", error);
     } finally {
@@ -283,6 +314,8 @@ export default function App() {
           <div className="space-y-12">
             <DailyPick 
               entries={entries} 
+              savedPick={dailyPick}
+              onUpdatePick={handleUpdateDailyPick}
               onStartWatching={(entry) => handleUpdateEntry({ ...entry, status: 'Watching' })}
               onSelect={setSelectedEntry}
             />
@@ -388,7 +421,12 @@ export default function App() {
       case 'challenge':
         return (
           <div className="max-w-7xl mx-auto px-6 py-12">
-            <ChallengeTracker entries={entries} />
+            <ChallengeTracker 
+              entries={entries} 
+              startDate={challengeStart}
+              onStart={handleStartChallenge}
+              onReset={handleResetChallenge}
+            />
           </div>
         );
       case 'journal':
@@ -413,7 +451,7 @@ export default function App() {
           <CustomLists 
             entries={entries} 
             lists={customLists}
-            onAddList={handleAddList}
+            onAddList={handleCreateList}
             onDeleteList={handleDeleteList}
             onUpdateList={handleUpdateList}
             onSelectEntry={setSelectedEntry}
@@ -523,7 +561,10 @@ export default function App() {
       </div>
 
       <QuickLog onSave={handleAddEntry} />
-      <MoodMusicPlayer />
+      <MoodMusicPlayer 
+        preferences={preferences}
+        onUpdatePreferences={handleUpdatePreferences}
+      />
 
       <AnimatePresence>
         {journalEntry && (

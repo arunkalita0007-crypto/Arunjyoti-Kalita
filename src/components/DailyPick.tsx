@@ -6,23 +6,23 @@ import { cn } from '../lib/utils';
 
 interface DailyPickProps {
   entries: Entry[];
+  savedPick: { id: string; date: string } | null;
+  onUpdatePick: (pick: { id: string; date: string } | null) => void;
   onStartWatching: (entry: Entry) => void;
   onSelect: (entry: Entry) => void;
 }
 
-export function DailyPick({ entries, onStartWatching, onSelect }: DailyPickProps) {
+export function DailyPick({ entries, savedPick, onUpdatePick, onStartWatching, onSelect }: DailyPickProps) {
   const [pick, setPick] = useState<Entry | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
 
   const wantToWatch = useMemo(() => entries.filter(e => e.status === 'Want to Watch'), [entries]);
 
   useEffect(() => {
-    const savedPickId = localStorage.getItem('cinetrack_daily_pick_id');
-    const savedPickDate = localStorage.getItem('cinetrack_daily_pick_date');
     const today = new Date().toDateString();
 
-    if (savedPickId && savedPickDate === today) {
-      const found = wantToWatch.find(e => e.id === savedPickId);
+    if (savedPick && savedPick.date === today) {
+      const found = wantToWatch.find(e => e.id === savedPick.id);
       if (found) {
         setPick(found);
         return;
@@ -33,22 +33,13 @@ export function DailyPick({ entries, onStartWatching, onSelect }: DailyPickProps
     if (wantToWatch.length > 0) {
       generateNewPick();
     }
-  }, [wantToWatch]);
+  }, [wantToWatch, savedPick]);
 
   const generateNewPick = () => {
     if (wantToWatch.length === 0) return;
 
     const dayOfWeek = new Date().getDay(); // 0-6 (Sun-Sat)
     
-    // Logic: 
-    // Sun: World Cinema (non-English)
-    // Mon: Light Comedy / Sitcom
-    // Tue: Drama / History
-    // Wed: Sci-Fi / Fantasy
-    // Thu: Thriller / Horror
-    // Fri: Epic Drama / Action
-    // Sat: Highest Rated
-
     let filtered = [...wantToWatch];
     
     switch(dayOfWeek) {
@@ -65,8 +56,7 @@ export function DailyPick({ entries, onStartWatching, onSelect }: DailyPickProps
 
     const randomPick = filtered[Math.floor(Math.random() * filtered.length)];
     setPick(randomPick);
-    localStorage.setItem('cinetrack_daily_pick_id', randomPick.id);
-    localStorage.setItem('cinetrack_daily_pick_date', new Date().toDateString());
+    onUpdatePick({ id: randomPick.id, date: new Date().toDateString() });
   };
 
   if (!pick || isDismissed) return null;

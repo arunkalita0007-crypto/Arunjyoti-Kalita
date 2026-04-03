@@ -7,24 +7,21 @@ import { cn } from '../lib/utils';
 
 interface ChallengeTrackerProps {
   entries: Entry[];
+  startDate: string | null;
+  onStart: () => void;
+  onReset: () => void;
 }
 
-export function ChallengeTracker({ entries }: ChallengeTrackerProps) {
-  const [startDate, setStartDate] = useState<string | null>(() => {
-    return localStorage.getItem('cine_challenge_start');
-  });
+export function ChallengeTracker({ entries, startDate, onStart, onReset }: ChallengeTrackerProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleStart = () => {
-    const today = startOfDay(new Date()).toISOString();
-    localStorage.setItem('cine_challenge_start', today);
-    setStartDate(today);
+    onStart();
   };
 
   const handleReset = () => {
     if (window.confirm('Are you sure you want to reset your 30-day challenge? All progress will be lost.')) {
-      localStorage.removeItem('cine_challenge_start');
-      setStartDate(null);
+      onReset();
       setShowSettings(false);
     }
   };

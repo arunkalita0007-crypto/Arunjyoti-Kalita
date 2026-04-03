@@ -77,21 +77,33 @@ const MOODS: Mood[] = [
   }
 ];
 
-export function MoodMusicPlayer() {
+interface MoodMusicPlayerProps {
+  preferences: { mood: string; volume: number };
+  onUpdatePreferences: (newPrefs: any) => void;
+}
+
+export function MoodMusicPlayer({ preferences, onUpdatePreferences }: MoodMusicPlayerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isError, setIsError] = useState(false);
   const [currentMood, setCurrentMood] = useState<Mood>(() => {
-    const saved = localStorage.getItem('cinetrack_mood');
-    return saved ? MOODS.find(m => m.id === saved) || MOODS[0] : MOODS[0];
+    return MOODS.find(m => m.id === preferences.mood) || MOODS[0];
   });
-  const [volume, setVolume] = useState(() => {
-    const saved = localStorage.getItem('cinetrack_volume');
-    return saved ? parseFloat(saved) : 0.5;
-  });
+  const [volume, setVolume] = useState(preferences.volume);
   const [isMuted, setIsMuted] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sync state with props
+  useEffect(() => {
+    const mood = MOODS.find(m => m.id === preferences.mood) || MOODS[0];
+    if (mood.id !== currentMood.id) {
+      setCurrentMood(mood);
+    }
+    if (preferences.volume !== volume) {
+      setVolume(preferences.volume);
+    }
+  }, [preferences]);
 
   const playAudio = async () => {
     if (audioRef.current && isPlaying && !isError) {
@@ -152,11 +164,11 @@ export function MoodMusicPlayer() {
         playAudio();
       }
     }
-    localStorage.setItem('cinetrack_mood', currentMood.id);
+    onUpdatePreferences({ mood: currentMood.id });
   }, [currentMood]);
 
   useEffect(() => {
-    localStorage.setItem('cinetrack_volume', volume.toString());
+    onUpdatePreferences({ volume });
   }, [volume]);
 
   // Listen for genre changes from Dashboard
