@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { DetailView } from './components/DetailView';
 import { EntryForm } from './components/EntryForm';
 import { MoodMusicPlayer } from './components/MoodMusicPlayer';
+import { ExportButton } from './components/ExportButton';
+import { CheckCircle2 } from 'lucide-react';
 import { JournalModal } from './components/JournalModal';
 import { MyJournal } from './components/MyJournal';
 import { DailyPick } from './components/DailyPick';
@@ -54,6 +56,7 @@ export default function App() {
   const [pendingListId, setPendingListId] = useState<string | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   // Load data on login or refresh
   useEffect(() => {
@@ -379,6 +382,16 @@ export default function App() {
                       <LogOut className="w-4 h-4" />
                       Sign Out
                     </button>
+                    <ExportButton 
+                      entries={entries} 
+                      username={userId || 'User'} 
+                      customLists={customLists}
+                      className="!w-auto !h-auto px-6 py-3"
+                      onExportComplete={() => {
+                        setShowToast(true);
+                        setTimeout(() => setShowToast(false), 3000);
+                      }}
+                    />
                     {entries.length === 0 && (
                       <button 
                         onClick={handleSeedData}
@@ -445,7 +458,17 @@ export default function App() {
       case 'map':
         return <WorldCinemaMap entries={entries} onSelect={setSelectedEntry} />;
       case 'evolution':
-        return <TasteEvolution entries={entries} />;
+        return (
+          <TasteEvolution 
+            entries={entries} 
+            username={userId || 'User'} 
+            customLists={customLists}
+            onExportComplete={() => {
+              setShowToast(true);
+              setTimeout(() => setShowToast(false), 3000);
+            }}
+          />
+        );
       case 'lists':
         return (
           <CustomLists 
@@ -477,6 +500,26 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500 selection:text-white flex">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-8 right-8 z-[100] bg-zinc-900 border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center gap-3"
+          >
+            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-white uppercase tracking-widest">Success</p>
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">✅ Your CineTrack data has been exported!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar Navigation */}
       <aside className="fixed top-0 left-0 bottom-0 w-20 lg:w-64 bg-black/80 backdrop-blur-xl border-r border-white/5 z-50 flex flex-col">
         <div className="p-6 flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('dashboard')}>

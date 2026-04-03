@@ -4,16 +4,20 @@ import { TrendingUp, Star, Film, Globe, Sparkles, Calendar, ChevronRight } from 
 import { 
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
-import { Entry } from '../types';
+import { Entry, CustomList } from '../types';
+import { ExportButton } from './ExportButton';
 import { cn } from '../lib/utils';
 
 interface TasteEvolutionProps {
   entries: Entry[];
+  username: string;
+  customLists: CustomList[];
+  onExportComplete: () => void;
 }
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#ef4444', '#eab308', '#22c55e', '#06b6d4'];
 
-export function TasteEvolution({ entries }: TasteEvolutionProps) {
+export function TasteEvolution({ entries, username, customLists, onExportComplete }: TasteEvolutionProps) {
   const completedEntries = entries.filter(e => e.status === 'Completed' && e.watchedDate);
 
   const timelineData = useMemo(() => {
@@ -59,16 +63,27 @@ export function TasteEvolution({ entries }: TasteEvolutionProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-24">
-      <header className="space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-purple-500" />
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-purple-500" />
+            </div>
+            <h1 className="text-5xl font-black text-white uppercase tracking-tighter font-display">Taste Evolution</h1>
           </div>
-          <h1 className="text-5xl font-black text-white uppercase tracking-tighter font-display">Taste Evolution</h1>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] ml-16">
+            Visualizing your cinematic growth over time
+          </p>
         </div>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] ml-16">
-          Visualizing your cinematic growth over time
-        </p>
+        
+        <div className="md:w-64">
+          <ExportButton 
+            entries={entries} 
+            username={username} 
+            customLists={customLists}
+            onExportComplete={onExportComplete}
+          />
+        </div>
       </header>
 
       {/* Personality Section */}
