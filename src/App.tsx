@@ -22,6 +22,7 @@ import { WeeklyChallenge } from './components/WeeklyChallenge';
 import { CustomLists } from './components/CustomLists';
 import { AuthScreen } from './components/AuthScreen';
 import { auth, db } from './firebase';
+import { SAMPLE_DATA } from './sampleData';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 
@@ -41,6 +42,7 @@ export default function App() {
   const [journalEntry, setJournalEntry] = useState<Entry | null>(null);
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const [pendingListId, setPendingListId] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Auth listener
   useEffect(() => {
@@ -312,6 +314,28 @@ export default function App() {
     }
   };
 
+  const handleSeedData = async () => {
+    if (!user || isSeeding) return;
+    setIsSeeding(true);
+    try {
+      const batch = writeBatch(db);
+      SAMPLE_DATA.forEach(entry => {
+        const { id, ...data } = entry;
+        const docRef = doc(collection(db, 'entries'));
+        batch.set(docRef, { 
+          ...data, 
+          userId: user.uid,
+          addedAt: new Date().toISOString() 
+        });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error seeding data:", error);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -331,6 +355,8 @@ export default function App() {
               onAdd={handleAddEntry}
               onEdit={handleEditEntry}
               onSelect={setSelectedEntry}
+              onSeed={handleSeedData}
+              isSeeding={isSeeding}
             />
           </div>
         );
@@ -345,6 +371,8 @@ export default function App() {
             onAdd={handleAddEntry}
             onEdit={handleEditEntry}
             onSelect={setSelectedEntry}
+            onSeed={handleSeedData}
+            isSeeding={isSeeding}
             initialFilter="Want to Watch"
           />
         );
@@ -385,6 +413,20 @@ export default function App() {
                       >
                         <Sparkles className="w-4 h-4" />
                         Migrate Local Data
+                      </button>
+                    )}
+                    {entries.length === 0 && (
+                      <button 
+                        onClick={handleSeedData}
+                        disabled={isSeeding}
+                        className="px-6 py-3 bg-purple-500/20 text-purple-500 border border-purple-500/30 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-purple-500 hover:text-white transition-all disabled:opacity-50"
+                      >
+                        {isSeeding ? (
+                          <div className="w-4 h-4 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+                        ) : (
+                          <Film className="w-4 h-4" />
+                        )}
+                        {isSeeding ? 'Loading...' : 'Load Sample Data'}
                       </button>
                     )}
                   </div>

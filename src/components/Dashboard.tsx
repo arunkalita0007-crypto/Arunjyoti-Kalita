@@ -19,6 +19,8 @@ interface DashboardProps {
   onAdd: (entry: Entry) => void;
   onEdit: (entry: Entry) => void;
   onSelect: (entry: Entry) => void;
+  onSeed?: () => void;
+  isSeeding?: boolean;
   initialFilter?: Status;
 }
 
@@ -31,6 +33,8 @@ export function Dashboard({
   onAdd,
   onEdit,
   onSelect,
+  onSeed,
+  isSeeding,
   initialFilter 
 }: DashboardProps) {
   const [search, setSearch] = useState('');
@@ -445,6 +449,20 @@ export function Dashboard({
                 <h4 className="text-2xl font-black text-white uppercase tracking-tight">No titles found</h4>
                 <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Try adjusting your filters or add something new!</p>
               </div>
+              {onSeed && entries.length === 0 && (
+                <button
+                  onClick={onSeed}
+                  disabled={isSeeding}
+                  className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 mx-auto hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50 disabled:scale-100"
+                >
+                  {isSeeding ? (
+                    <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {isSeeding ? 'Loading...' : 'Load Preloaded "Want to Watch" List'}
+                </button>
+              )}
             </div>
           )}
         </div>
