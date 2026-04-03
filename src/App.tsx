@@ -417,80 +417,82 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500 selection:text-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black text-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">CT</div>
-            <span className="text-xl font-black text-white uppercase tracking-tighter font-display group-hover:text-blue-500 transition-colors">CineTrack</span>
-          </div>
-
-          <div className="flex items-center gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar flex-1 sm:flex-none">
-            {[
-              { id: 'dashboard', icon: LayoutDashboard, label: 'Feed' },
-              { id: 'watchlist', icon: Bookmark, label: 'Watchlist' },
-              { id: 'lists', icon: List, label: 'Lists' },
-              { id: 'journal', icon: Book, label: 'Journal' },
-              { id: 'goals', icon: Target, label: 'Goals' },
-              { id: 'map', icon: Globe, label: 'Map' },
-              { id: 'evolution', icon: TrendingUp, label: 'Evolution' },
-              { id: 'arena', icon: Trophy, label: 'Arena' },
-              { id: 'challenge', icon: Calendar, label: '30 Day' },
-              { id: 'profile', icon: User, label: 'Profile' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as Tab)}
-                className={cn(
-                  "flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 whitespace-nowrap",
-                  activeTab === tab.id 
-                    ? "bg-white text-black shadow-xl scale-105" 
-                    : "text-gray-500 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden sm:block">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 md:gap-4 shrink-0">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 md:px-4 py-2 text-gray-500 hover:text-red-500 transition-colors font-black uppercase tracking-widest text-[10px]"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:block">Sign Out</span>
-            </button>
-            <button
-              onClick={() => {
-                setEditingEntry(null);
-                setPendingListId(null);
-                setIsFormOpen(true);
-              }}
-              className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
-          </div>
+    <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500 selection:text-white flex">
+      {/* Sidebar Navigation */}
+      <aside className="fixed top-0 left-0 bottom-0 w-20 lg:w-64 bg-black/80 backdrop-blur-xl border-r border-white/5 z-50 flex flex-col">
+        <div className="p-6 flex items-center gap-3 group cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+          <div className="w-10 h-10 bg-white text-black rounded-xl flex-shrink-0 flex items-center justify-center font-black text-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] group-hover:scale-110 transition-transform">CT</div>
+          <span className="hidden lg:block text-xl font-black text-white uppercase tracking-tighter font-display group-hover:text-blue-500 transition-colors">CineTrack</span>
         </div>
-      </nav>
 
-      <main className="pt-20 pb-32">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+        <div className="flex-1 px-3 py-6 space-y-2 overflow-y-auto no-scrollbar">
+          {[
+            { id: 'dashboard', icon: LayoutDashboard, label: 'Feed' },
+            { id: 'watchlist', icon: Bookmark, label: 'Watchlist' },
+            { id: 'lists', icon: List, label: 'Lists' },
+            { id: 'journal', icon: Book, label: 'Journal' },
+            { id: 'goals', icon: Target, label: 'Goals' },
+            { id: 'map', icon: Globe, label: 'Map' },
+            { id: 'evolution', icon: TrendingUp, label: 'Evolution' },
+            { id: 'arena', icon: Trophy, label: 'Arena' },
+            { id: 'challenge', icon: Calendar, label: '30 Day' },
+            { id: 'profile', icon: User, label: 'Profile' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as Tab)}
+              className={cn(
+                "w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500",
+                activeTab === tab.id 
+                  ? "bg-white text-black shadow-xl scale-105" 
+                  : "text-gray-500 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <tab.icon className="w-5 h-5 flex-shrink-0" />
+              <span className="hidden lg:block">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="p-4 border-t border-white/5 space-y-4">
+          <button
+            onClick={() => {
+              setEditingEntry(null);
+              setPendingListId(null);
+              setIsFormOpen(true);
+            }}
+            className="w-full h-12 bg-blue-500 text-white rounded-2xl flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
           >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+            <Plus className="w-6 h-6" />
+            <span className="hidden lg:block font-black uppercase tracking-widest text-[10px]">Add New</span>
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 px-4 py-4 text-gray-500 hover:text-red-500 transition-colors font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-white/5"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="hidden lg:block">Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 ml-20 lg:ml-64">
+        <main className="pb-32">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
       <QuickLog onSave={handleAddEntry} />
       <MoodMusicPlayer />
