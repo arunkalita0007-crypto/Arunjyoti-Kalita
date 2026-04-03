@@ -43,17 +43,27 @@ export default function App() {
 
   // Fetch data from backend
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setEntries(SAMPLE_DATA);
+      setGoals([]);
+      setCustomLists([]);
+      return;
+    }
 
     const fetchData = async () => {
+      setAuthLoading(true);
       try {
         const response = await fetch(`/api/data/${userId}`);
-        const data = await response.json();
-        setEntries(data.entries || []);
-        setGoals(data.goals || []);
-        setCustomLists(data.lists || []);
+        if (response.ok) {
+          const data = await response.json();
+          setEntries(data.entries || SAMPLE_DATA);
+          setGoals(data.goals || []);
+          setCustomLists(data.lists || []);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setAuthLoading(false);
       }
     };
 
@@ -80,6 +90,8 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    // Final save attempt before logout
+    saveData(entries, goals, customLists);
     localStorage.removeItem('cinetrack_userid');
     setUserId(null);
     setEntries(SAMPLE_DATA);
