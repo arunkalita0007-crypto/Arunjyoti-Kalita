@@ -53,7 +53,7 @@ export const parseCSV = (csvText: string): Entry[] => {
       return undefined;
     };
 
-    const entry: Entry = {
+    const entry: any = {
       id: Math.random().toString(36).substr(2, 9),
       status: statusMap[cols[0]] || 'Completed',
       title: cols[1],
@@ -86,7 +86,14 @@ export const parseCSV = (csvText: string): Entry[] => {
       addedAt: parseDate(cols[33]) || new Date().toISOString()
     };
 
-    entries.push(entry);
+    // Clean undefined values to prevent Firestore errors
+    Object.keys(entry).forEach(key => {
+      if (entry[key] === undefined) {
+        delete entry[key];
+      }
+    });
+
+    entries.push(entry as Entry);
   }
   return entries;
 };
