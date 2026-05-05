@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Entry, Goal, CustomList } from './types';
-import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus, Book, Target, Globe, TrendingUp, List, Database } from 'lucide-react';
+import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus, Book, Target, Globe, TrendingUp, List, Database, Image as ImageIcon } from 'lucide-react';
 import { cn } from './lib/utils';
 import { QuickLog } from './components/QuickLog';
 import { CinematicWrapped } from './components/CinematicWrapped';
@@ -481,6 +481,54 @@ export default function App() {
                     >
                       <Database className="w-4 h-4" />
                       Import Old Data
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const legacyId = window.prompt("Enter your old User ID (e.g. AJK) to recover posters from:");
+                        if (!legacyId) return;
+                        const id = legacyId.trim().toLowerCase();
+                        const savedEntries = loadUserData(id, 'entries', null);
+                        if (!savedEntries) {
+                          alert(`No data found on this device for ID: "${id}".`);
+                          return;
+                        }
+                        
+                        let recoveredCount = 0;
+                        const updatedEntries = entries.map(currentEntry => {
+                          if (!currentEntry.posterUrl) {
+                            const match = savedEntries.find((e: Entry) => e.title.toLowerCase() === currentEntry.title.toLowerCase());
+                            if (match && match.posterUrl) {
+                              recoveredCount++;
+                              return { ...currentEntry, posterUrl: match.posterUrl };
+                            }
+                          }
+                          return currentEntry;
+                        });
+
+                        if (recoveredCount === 0) {
+                          alert("Could not find any missing posters in the old data.");
+                          return;
+                        }
+
+                        if (window.confirm(`Found ${recoveredCount} missing posters! Do you want to apply them to your current list?`)) {
+                          setEntries(updatedEntries);
+                          const legacyData = {
+                            entries: updatedEntries,
+                            goals,
+                            lists: customLists,
+                            challenge: challengeStart,
+                            preferences,
+                            dailyPick
+                          };
+                          syncAllDataToCloud(userId!, legacyData)
+                            .then(() => alert(`Successfully recovered ${recoveredCount} posters!`))
+                            .catch(e => alert("Failed to sync to cloud: " + e.message));
+                        }
+                      }}
+                      className="px-6 py-3 bg-neon-purple/10 text-neon-purple rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-neon-purple/20 transition-all border border-neon-purple/20"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Recover Posters
                     </button>
                     <ImportCSVButton 
                       onImport={(importedEntries) => {
