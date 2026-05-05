@@ -437,98 +437,15 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-5xl font-black text-white uppercase tracking-tighter font-display leading-none">{userId}</h2>
-                  <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.3em]">Logged in as {userId}</p>
-                  <div className="flex gap-4 pt-4">
+                  <h2 className="text-5xl font-black text-white uppercase tracking-tighter font-display leading-none truncate max-w-[15ch] lg:max-w-md">{auth.currentUser?.displayName || userId}</h2>
+                  <p className="text-sm font-bold text-gray-500 uppercase tracking-[0.3em] truncate max-w-[20ch] lg:max-w-md">Logged in as {auth.currentUser?.email || userId}</p>
+                  <div className="flex flex-wrap gap-4 pt-4">
                     <button 
                       onClick={() => setShowWrapped(true)}
                       className="px-6 py-3 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                     >
                       <Sparkles className="w-4 h-4" />
                       View Wrapped
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const legacyId = window.prompt("Enter your old User ID (e.g. AJK) to import its data:");
-                        if (!legacyId) return;
-                        const id = legacyId.trim().toLowerCase();
-                        const savedEntries = loadUserData(id, 'entries', null);
-                        if (!savedEntries) {
-                          alert(`No data found on this device for ID: "${id}". Make sure you are on the same domain where you used this ID!`);
-                          return;
-                        }
-                        if (window.confirm(`Found ${savedEntries.length} movies for "${id}". This will OVERWRITE your current cloud data. Proceed?`)) {
-                          const legacyData = {
-                            entries: savedEntries,
-                            goals: loadUserData(id, 'goals', []),
-                            lists: loadUserData(id, 'lists', []),
-                            challenge: loadUserData(id, 'challenge', null),
-                            preferences: loadUserData(id, 'preferences', { mood: 'cinematic', volume: 0.5 }),
-                            dailyPick: loadUserData(id, 'dailyPick', null)
-                          };
-                          setEntries(legacyData.entries);
-                          setGoals(legacyData.goals);
-                          setCustomLists(legacyData.lists);
-                          setChallengeStart(legacyData.challenge);
-                          setPreferences(legacyData.preferences);
-                          setDailyPick(legacyData.dailyPick);
-                          syncAllDataToCloud(userId!, legacyData)
-                            .then(() => alert("Migration complete! Your old data is now in the cloud."))
-                            .catch(e => alert("Failed to sync to cloud: " + e.message));
-                        }
-                      }}
-                      className="px-6 py-3 bg-white/5 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-white/10 transition-all border border-white/10"
-                    >
-                      <Database className="w-4 h-4" />
-                      Import Old Data
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const legacyId = window.prompt("Enter your old User ID (e.g. AJK) to recover posters from:");
-                        if (!legacyId) return;
-                        const id = legacyId.trim().toLowerCase();
-                        const savedEntries = loadUserData(id, 'entries', null);
-                        if (!savedEntries) {
-                          alert(`No data found on this device for ID: "${id}".`);
-                          return;
-                        }
-                        
-                        let recoveredCount = 0;
-                        const updatedEntries = entries.map(currentEntry => {
-                          if (!currentEntry.posterUrl) {
-                            const match = savedEntries.find((e: Entry) => e.title.toLowerCase() === currentEntry.title.toLowerCase());
-                            if (match && match.posterUrl) {
-                              recoveredCount++;
-                              return { ...currentEntry, posterUrl: match.posterUrl };
-                            }
-                          }
-                          return currentEntry;
-                        });
-
-                        if (recoveredCount === 0) {
-                          alert("Could not find any missing posters in the old data.");
-                          return;
-                        }
-
-                        if (window.confirm(`Found ${recoveredCount} missing posters! Do you want to apply them to your current list?`)) {
-                          setEntries(updatedEntries);
-                          const legacyData = {
-                            entries: updatedEntries,
-                            goals,
-                            lists: customLists,
-                            challenge: challengeStart,
-                            preferences,
-                            dailyPick
-                          };
-                          syncAllDataToCloud(userId!, legacyData)
-                            .then(() => alert(`Successfully recovered ${recoveredCount} posters!`))
-                            .catch(e => alert("Failed to sync to cloud: " + e.message));
-                        }
-                      }}
-                      className="px-6 py-3 bg-neon-purple/10 text-neon-purple rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-neon-purple/20 transition-all border border-neon-purple/20"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                      Recover Posters
                     </button>
                     <ImportCSVButton 
                       onImport={(importedEntries) => {

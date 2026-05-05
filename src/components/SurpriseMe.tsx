@@ -59,21 +59,21 @@ export function SurpriseMe({ entries, onSelect }: SurpriseMeProps) {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="relative w-full max-w-2xl flex flex-col items-center text-center space-y-12"
+              className="relative w-full max-w-2xl flex flex-col items-center justify-center text-center space-y-6 md:space-y-8 max-h-[90vh] overflow-y-auto p-4"
             >
               <button 
                 onClick={() => setIsOpen(false)}
-                className="absolute -top-20 right-0 w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-all"
+                className="absolute top-0 right-0 md:-top-10 md:-right-10 w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition-all z-50"
               >
                 <X className="w-6 h-6" />
               </button>
 
-              <div className="space-y-4">
-                <h2 className="text-5xl font-black text-white uppercase tracking-tighter font-display leading-none">The Cinema Oracle Speaks...</h2>
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Choosing your next masterpiece</p>
+              <div className="space-y-2 md:space-y-4 pt-12 md:pt-0">
+                <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter font-display leading-none">The Cinema Oracle Speaks...</h2>
+                <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-widest">Choosing your next masterpiece</p>
               </div>
 
-              <div className="relative w-full aspect-[2/3] max-w-sm mx-auto rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 group">
+              <div className="relative w-48 md:w-full md:max-w-sm aspect-[2/3] shrink-0 mx-auto rounded-3xl md:rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 group">
                 <AnimatePresence mode="wait">
                   {isRevealing ? (
                     <motion.div
@@ -112,8 +112,8 @@ export function SurpriseMe({ entries, onSelect }: SurpriseMeProps) {
                           <Star className="w-5 h-5 fill-current" />
                           <span className="text-xl font-black">{selectedEntry.imdbRating}</span>
                         </div>
-                        <h3 className="text-4xl font-black text-white uppercase tracking-tight leading-none">{selectedEntry.title}</h3>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{selectedEntry.genre} • {selectedEntry.year}</p>
+                        <h3 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tight leading-none">{selectedEntry.title}</h3>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">{selectedEntry.genre} • {selectedEntry.year}</p>
                       </div>
                     </motion.div>
                   ) : null}
@@ -121,20 +121,20 @@ export function SurpriseMe({ entries, onSelect }: SurpriseMeProps) {
               </div>
 
               {!isRevealing && selectedEntry && (
-                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md relative z-10">
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm relative z-10 shrink-0 pb-8">
                   <button
                     onClick={() => {
                       onSelect(selectedEntry);
                       setIsOpen(false);
                     }}
-                    className="flex-1 py-6 bg-white text-black rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]"
+                    className="flex-1 py-4 md:py-6 bg-white text-black rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]"
                   >
                     <Play className="w-5 h-5 fill-current" />
                     Watch Now
                   </button>
                   <button
                     onClick={handleSurprise}
-                    className="flex-1 py-6 bg-zinc-900 text-white border border-white/10 rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-zinc-800 transition-all"
+                    className="flex-1 py-4 md:py-6 bg-zinc-900 text-white border border-white/10 rounded-2xl md:rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-zinc-800 transition-all"
                   >
                     <RotateCcw className="w-5 h-5" />
                     Try Again

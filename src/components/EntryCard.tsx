@@ -88,7 +88,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, o
     hoverTimerRef.current = setTimeout(() => {
       setIsPreviewActive(true);
       setIsLoadingPreview(false);
-    }, 2000);
+    }, 500);
   };
 
   const clearHoverTimer = () => {
@@ -101,7 +101,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, o
   const handleTouchStart = () => {
     touchTimerRef.current = setTimeout(() => {
       setIsPreviewActive(true);
-    }, 2000);
+    }, 500);
   };
 
   const handleTouchEnd = () => {
@@ -155,7 +155,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, o
                   <motion.div 
                     initial={{ height: 0 }}
                     animate={{ height: "100%" }}
-                    transition={{ duration: 2, ease: "linear" }}
+                    transition={{ duration: 0.5, ease: "linear" }}
                     className="absolute inset-0 border-2 border-blue-500/20 rounded-full"
                   />
                 </div>
@@ -300,12 +300,12 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, o
 
         {/* Content Area */}
         <div 
-          className="p-6 space-y-4 cursor-pointer"
+          className="p-4 space-y-3 cursor-pointer"
           onClick={() => onSelect?.(entry)}
         >
           <div className="space-y-1">
             <div className="flex justify-between items-start">
-              <h3 className="text-xl font-black text-white leading-tight line-clamp-1 group-hover:text-neon-blue transition-colors duration-300 font-display uppercase tracking-tight">
+              <h3 className="text-lg font-black text-white leading-tight line-clamp-1 group-hover:text-neon-blue transition-colors duration-300 font-display uppercase tracking-tight">
                 {entry.title}
               </h3>
             </div>
