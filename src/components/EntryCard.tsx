@@ -184,7 +184,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onEdit, onUpdate, o
         )}
 
         {/* Poster Image Container */}
-        <div className="aspect-[2/3] relative overflow-hidden bg-zinc-950">
+        <div className="aspect-[4/5] relative overflow-hidden bg-zinc-950">
           {poster ? (
             <motion.img 
               initial={{ scale: 1.2, opacity: 0 }}

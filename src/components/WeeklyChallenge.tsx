@@ -46,6 +46,7 @@ export function WeeklyChallenge({ entries }: WeeklyChallengeProps) {
   };
 
   const leaderboard = [...MOCK_LEADERBOARD, myStats].sort((a, b) => b.points - a.points);
+  const myRank = leaderboard.findIndex(u => u.isMe) + 1;
 
   return (
     <div className="space-y-12">
@@ -131,7 +132,7 @@ export function WeeklyChallenge({ entries }: WeeklyChallengeProps) {
                 <div className="grid grid-cols-2 gap-6">
                   {[
                     { label: 'Total Points', value: myStats.points, icon: Star, color: 'text-yellow-500' },
-                    { label: 'Rank', value: '#3', icon: Medal, color: 'text-blue-500' },
+                    { label: 'Rank', value: `#${myRank}`, icon: Medal, color: 'text-blue-500' },
                     { label: 'Streak', value: '2w', icon: TrendingUp, color: 'text-green-500' },
                     { label: 'Badges', value: '12', icon: Trophy, color: 'text-purple-500' },
                   ].map((stat, i) => (
@@ -189,7 +190,7 @@ export function WeeklyChallenge({ entries }: WeeklyChallengeProps) {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Your Rank</p>
-                  <p className="text-2xl font-black text-white">#3</p>
+                  <p className="text-2xl font-black text-white">#{myRank}</p>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                   <Users className="w-6 h-6 text-blue-500" />
