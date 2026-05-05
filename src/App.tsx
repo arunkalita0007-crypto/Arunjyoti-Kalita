@@ -23,6 +23,7 @@ import { DirectorProfile } from './components/DirectorProfile';
 import { WeeklyChallenge } from './components/WeeklyChallenge';
 import { CustomLists } from './components/CustomLists';
 import { AuthScreen } from './components/AuthScreen';
+import { ImportCSVButton } from './components/ImportCSVButton';
 import { SAMPLE_DATA } from './sampleData';
 import { 
   saveUserData, 
@@ -481,6 +482,24 @@ export default function App() {
                       <Database className="w-4 h-4" />
                       Import Old Data
                     </button>
+                    <ImportCSVButton 
+                      onImport={(importedEntries) => {
+                        if (window.confirm(`Found ${importedEntries.length} movies in CSV. This will OVERWRITE your current cloud data. Proceed?`)) {
+                          setEntries(importedEntries);
+                          const legacyData = {
+                            entries: importedEntries,
+                            goals: goals,
+                            lists: customLists,
+                            challenge: challengeStart,
+                            preferences: preferences,
+                            dailyPick: dailyPick
+                          };
+                          syncAllDataToCloud(userId!, legacyData)
+                            .then(() => alert(`Successfully imported ${importedEntries.length} movies!`))
+                            .catch(e => alert("Failed to sync to cloud: " + e.message));
+                        }
+                      }}
+                    />
                     <button 
                       onClick={handleLogout}
                       className="px-6 py-3 bg-zinc-800 text-white border border-white/5 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-zinc-700 transition-all"
