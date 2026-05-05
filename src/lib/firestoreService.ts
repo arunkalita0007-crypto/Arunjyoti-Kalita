@@ -37,9 +37,9 @@ export const loadUserDataFromCloud = async (userId: string): Promise<Partial<Use
       return docSnap.data() as UserData;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error loading data from cloud:", error);
-    return null;
+    throw error;
   }
 };
 

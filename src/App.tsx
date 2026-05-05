@@ -145,9 +145,13 @@ export default function App() {
           setEntries(SAMPLE_DATA);
         }
       }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Critical error in loadAllData:", error);
-        alert("Failed to connect to the database. If you are using an adblocker or Brave browser, please disable shields for this site.");
+        if (error.message?.includes('permission') || error.code === 'permission-denied') {
+          alert("⚠️ Could not load your data from the Cloud: Firebase Firestore Permissions Denied. Please go to the Firebase Console -> Firestore Database -> Rules, and set them to allow read/write for authenticated users.");
+        } else {
+          alert("Failed to connect to the database. If you are using an adblocker or Brave browser, please disable shields for this site.");
+        }
       } finally {
         setAuthLoading(false);
       }
@@ -167,8 +171,11 @@ export default function App() {
     // Sync to Cloud (Primary)
     try {
       await saveUserDataToCloud(userId, type, data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Cloud sync failed:", e);
+      if (e.message?.includes('permission') || e.code === 'permission-denied') {
+        alert("⚠️ Cloud Sync Failed: Firebase Firestore Permissions Denied. Please go to the Firebase Console -> Firestore Database -> Rules, and set them to allow read/write for authenticated users.");
+      }
     }
     
     setTimeout(() => setIsSyncing(false), 300);
