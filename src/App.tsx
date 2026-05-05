@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Entry, Goal, CustomList } from './types';
-import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus, Book, Target, Globe, TrendingUp, List } from 'lucide-react';
+import { Trophy, Film, Calendar, Sparkles, User, LogOut, LayoutDashboard, Bookmark, Plus, Book, Target, Globe, TrendingUp, List, Database } from 'lucide-react';
 import { cn } from './lib/utils';
 import { QuickLog } from './components/QuickLog';
 import { CinematicWrapped } from './components/CinematicWrapped';
@@ -91,9 +91,9 @@ export default function App() {
 
     const loadAllData = async () => {
       setAuthLoading(true);
-      
-      // 1. Try Cloud Data First
-      const cloudData = await loadUserDataFromCloud(userId);
+      try {
+        // 1. Try Cloud Data First
+        const cloudData = await loadUserDataFromCloud(userId);
       
       if (cloudData && Object.keys(cloudData).length > 0) {
         setEntries(cloudData.entries || []);
@@ -144,7 +144,12 @@ export default function App() {
           setEntries(SAMPLE_DATA);
         }
       }
-      setAuthLoading(false);
+      } catch (error) {
+        console.error("Critical error in loadAllData:", error);
+        alert("Failed to connect to the database. If you are using an adblocker or Brave browser, please disable shields for this site.");
+      } finally {
+        setAuthLoading(false);
+      }
     };
 
     loadAllData();
@@ -440,6 +445,41 @@ export default function App() {
                     >
                       <Sparkles className="w-4 h-4" />
                       View Wrapped
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const legacyId = window.prompt("Enter your old User ID (e.g. AJK) to import its data:");
+                        if (!legacyId) return;
+                        const id = legacyId.trim().toLowerCase();
+                        const savedEntries = loadUserData(id, 'entries', null);
+                        if (!savedEntries) {
+                          alert(`No data found on this device for ID: "${id}". Make sure you are on the same domain where you used this ID!`);
+                          return;
+                        }
+                        if (window.confirm(`Found ${savedEntries.length} movies for "${id}". This will OVERWRITE your current cloud data. Proceed?`)) {
+                          const legacyData = {
+                            entries: savedEntries,
+                            goals: loadUserData(id, 'goals', []),
+                            lists: loadUserData(id, 'lists', []),
+                            challenge: loadUserData(id, 'challenge', null),
+                            preferences: loadUserData(id, 'preferences', { mood: 'cinematic', volume: 0.5 }),
+                            dailyPick: loadUserData(id, 'dailyPick', null)
+                          };
+                          setEntries(legacyData.entries);
+                          setGoals(legacyData.goals);
+                          setCustomLists(legacyData.lists);
+                          setChallengeStart(legacyData.challenge);
+                          setPreferences(legacyData.preferences);
+                          setDailyPick(legacyData.dailyPick);
+                          syncAllDataToCloud(userId!, legacyData)
+                            .then(() => alert("Migration complete! Your old data is now in the cloud."))
+                            .catch(e => alert("Failed to sync to cloud: " + e.message));
+                        }
+                      }}
+                      className="px-6 py-3 bg-white/5 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-white/10 transition-all border border-white/10"
+                    >
+                      <Database className="w-4 h-4" />
+                      Import Old Data
                     </button>
                     <button 
                       onClick={handleLogout}
