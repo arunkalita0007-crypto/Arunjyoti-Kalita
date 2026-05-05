@@ -31,6 +31,9 @@ import {
   getUserSession, 
   clearUserSession 
 } from './lib/userStorage';
+import { saveUserDataToCloud, loadUserDataFromCloud, syncAllDataToCloud, UserData } from './lib/firestoreService';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 type Tab = 'dashboard' | 'watchlist' | 'journal' | 'goals' | 'map' | 'evolution' | 'arena' | 'challenge' | 'profile' | 'lists';
 
@@ -58,6 +61,22 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  // Initialize Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+        setUserSession(user.uid);
+      } else {
+        // Check for legacy session if no Firebase user
+        const legacySession = getUserSession();
+        if (legacySession) setUserId(legacySession);
+        else setUserId(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Load data on login or refresh
   useEffect(() => {
     if (!userId) {
@@ -70,22 +89,61 @@ export default function App() {
       return;
     }
 
-    const loadAllData = () => {
+    const loadAllData = async () => {
       setAuthLoading(true);
-      // Load each data type separately as requested
-      const savedEntries = loadUserData(userId, 'entries', SAMPLE_DATA);
-      const savedGoals = loadUserData(userId, 'goals', []);
-      const savedLists = loadUserData(userId, 'lists', []);
-      const savedChallenge = loadUserData(userId, 'challenge', null);
-      const savedPrefs = loadUserData(userId, 'preferences', { mood: 'cinematic', volume: 0.5 });
-      const savedDailyPick = loadUserData(userId, 'dailyPick', null);
+      
+      // 1. Try Cloud Data First
+      const cloudData = await loadUserDataFromCloud(userId);
+      
+      if (cloudData && Object.keys(cloudData).length > 0) {
+        setEntries(cloudData.entries || []);
+        setGoals(cloudData.goals || []);
+        setCustomLists(cloudData.lists || []);
+        setChallengeStart(cloudData.challenge || null);
+        setPreferences(cloudData.preferences || { mood: 'cinematic', volume: 0.5 });
+        setDailyPick(cloudData.dailyPick || null);
+      } else {
+        // 2. Migration Bridge: Check LocalStorage for this ID or ANY legacy ID
+        let migrationSource = userId;
+        const localEntries = loadUserData(userId, 'entries', null);
+        
+        if (!localEntries) {
+          // If no data for current ID, check for any legacy id in this browser
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('cinetrack_') && key.endsWith('_entries')) {
+               migrationSource = key.split('_')[1];
+               break;
+            }
+          }
+        }
 
-      setEntries(savedEntries);
-      setGoals(savedGoals);
-      setCustomLists(savedLists);
-      setChallengeStart(savedChallenge);
-      setPreferences(savedPrefs);
-      setDailyPick(savedDailyPick);
+        const savedEntries = loadUserData(migrationSource, 'entries', null);
+        if (savedEntries) {
+          console.log(`Migrating data from ${migrationSource} to cloud...`);
+          const legacyData: UserData = {
+            entries: savedEntries,
+            goals: loadUserData(migrationSource, 'goals', []),
+            lists: loadUserData(migrationSource, 'lists', []),
+            challenge: loadUserData(migrationSource, 'challenge', null),
+            preferences: loadUserData(migrationSource, 'preferences', { mood: 'cinematic', volume: 0.5 }),
+            dailyPick: loadUserData(migrationSource, 'dailyPick', null)
+          };
+          
+          setEntries(legacyData.entries);
+          setGoals(legacyData.goals);
+          setCustomLists(legacyData.lists);
+          setChallengeStart(legacyData.challenge);
+          setPreferences(legacyData.preferences);
+          setDailyPick(legacyData.dailyPick);
+          
+          // Push to cloud immediately
+          await syncAllDataToCloud(userId, legacyData);
+          setShowToast(true); // Notify user of sync
+        } else {
+          setEntries(SAMPLE_DATA);
+        }
+      }
       setAuthLoading(false);
     };
 
@@ -93,22 +151,30 @@ export default function App() {
   }, [userId]);
 
   // Save data instantly on every change
-  const persistData = (type: string, data: any) => {
+  const persistData = async (type: string, data: any) => {
     if (!userId) return;
     setIsSyncing(true);
+    
+    // Save to LocalStorage (Fallback)
     saveUserData(userId, type, data);
     
-    // Also sync to backend if it exists (optional but good for hybrid)
-    // For now, focusing on the requested localStorage fix
+    // Sync to Cloud (Primary)
+    try {
+      await saveUserDataToCloud(userId, type, data);
+    } catch (e) {
+      console.error("Cloud sync failed:", e);
+    }
+    
     setTimeout(() => setIsSyncing(false), 300);
   };
 
-  const handleLogin = (id: string) => {
+  const handleLogin = (id: string, displayName?: string) => {
     setUserSession(id);
     setUserId(id);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await auth.signOut();
     clearUserSession();
     setUserId(null);
     setActiveTab('dashboard');
